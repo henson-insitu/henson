@@ -18,7 +18,8 @@ struct Puppet
     typedef             void (*SetContextType)(void* parent, void* local);
 
                         Puppet(const std::string& fn):
-                            stack_(bc::stack_traits::default_size())
+                            //stack_(bc::stack_traits::default_size())
+                            stack_(1024*1024)
                         {
                             void* lib = dlopen(fn.c_str(), RTLD_LAZY);
                             main_ = (MainType) dlsym(lib, "main");
