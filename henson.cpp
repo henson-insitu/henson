@@ -22,7 +22,11 @@ struct Puppet
                         {
                             void* lib = dlopen(fn.c_str(), RTLD_LAZY);
                             main_ = (MainType) dlsym(lib, "main");
+                            if (main_ == NULL)
+                                fmt::print("Could not load main() in {}\n{}\n", fn, dlerror());
                             SetContextType set_contexts = (SetContextType) dlsym(lib, "set_contexts");
+                            if (set_contexts == NULL)
+                                fmt::print("Could not load set_contexts() in {}\n{}\n", fn, dlerror());
                             set_contexts(&from_, &to_);
 
                             to_ = bc::make_fcontext(&stack_[0] + stack_.size(), stack_.size(), exec);
