@@ -14,8 +14,7 @@ set                         (mpi_libraries              ${MPI_C_LIBRARIES} ${MPI
 set                         (libraries ${libraries}     ${mpi_libraries})
 
 # DL
-find_library                (DL_LIBRARY     dl)
-set                         (libraries ${libraries} ${DL_LIBRARY})
+set                         (libraries ${libraries} ${CMAKE_DL_LIBS})
 
 include_directories         (${CMAKE_CURRENT_BINARY_DIR}
                              ${CMAKE_CURRENT_SOURCE_DIR}
