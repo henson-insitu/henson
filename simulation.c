@@ -13,10 +13,12 @@ int main(int argc, char** argv)
     MPI_Comm_size(world, &size);
 
     int t;
-    for (t = 0; t < 2; ++t)
+    for (t = 0; t < 3; ++t)
     {
         sleep(rank);
         printf("Simulation [t=%d]: rank = %d out of %d\n", t, rank, size);
         yield();
     }
+
+    return 0;
 }

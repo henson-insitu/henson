@@ -17,8 +17,9 @@ struct Puppet
     typedef             int  (*MainType)(int argc, char *argv[]);
     typedef             void (*SetContextType)(void* parent, void* local);
 
-                        Puppet(const std::string& fn):
-                            //stack_(bc::stack_traits::default_size())
+                        Puppet(const std::string& fn, int argc, char** argv):
+                            argc_(argc), argv_(argv),
+                            //stack_(bc::stack_traits::default_size())      // requires Boost 1.58
                             stack_(1024*1024)
                         {
                             void* lib = dlopen(fn.c_str(), RTLD_LAZY);
@@ -36,12 +37,18 @@ struct Puppet
     void                proceed()               { bc::jump_fcontext(&from_, to_, (intptr_t) this); }
     void                yield()                 { bc::jump_fcontext(&to_, from_, 0); }
 
-    static void         exec(intptr_t self_)    { Puppet* self = (Puppet*) self_; self->running = true; self->main_(0,0); self->running = false; }
+    bool                running() const         { return running_; }
+
+    static void         exec(intptr_t self_)    { Puppet* self = (Puppet*) self_; self->running_ = true; self->main_(self->argc_,self->argv_); self->running_ = false; self->yield(); }
+
+
+    int                 argc_;
+    char**              argv_;
+    std::vector<char>   stack_;
 
     MainType            main_;
     bc::fcontext_t      from_, to_;
-    std::vector<char>   stack_;
-    bool                running;
+    bool                running_;
 };
 
 int main(int argc, char *argv[])
@@ -54,6 +61,8 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(world, &rank);
     MPI_Comm_size(world, &size);
 
+    fmt::print("henson: {} out of {}\n", rank, size);
+
     using namespace opts;
     Options ops(argc, argv);
 
@@ -65,13 +74,16 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    Puppet  simulation(simulation_fn);
-    Puppet  analysis(analysis_fn);
+    Puppet  simulation(simulation_fn, 0, 0);
+    Puppet  analysis(analysis_fn, 0, 0);
 
-    simulation.proceed();
-    analysis.proceed();
-    simulation.proceed();
-    analysis.proceed();
+    do
+    {
+        simulation.proceed();
+        if (!simulation.running())
+            break;
+        analysis.proceed();
+    } while (true);
 
     fmt::print("[{}]: henson done\n", rank);
 
