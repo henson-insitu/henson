@@ -1,3 +1,5 @@
+#include <stdexcept>
+
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
@@ -11,33 +13,28 @@ namespace bc = boost::context;
 #include <opts/opts.h>
 #include <format.h>
 
+#include <henson/namemap.hpp>
 
 struct Puppet
 {
     typedef             int  (*MainType)(int argc, char *argv[]);
     typedef             void (*SetContextType)(void* parent, void* local);
     typedef             void (*SetWorldType)(MPI_Comm world);
+    typedef             void (*SetNameMapType)(void* namemap);
 
-                        Puppet(const std::string& fn, int argc, char** argv, MPI_Comm world):
+                        Puppet(const std::string& fn, int argc, char** argv, MPI_Comm world, henson::NameMap* namemap):
+                            filename_(fn),
                             argc_(argc), argv_(argv),
                             //stack_(bc::stack_traits::default_size())      // requires Boost 1.58
                             stack_(1024*1024)
                         {
                             void* lib = dlopen(fn.c_str(), RTLD_LAZY);
 
-                            main_ = (MainType) dlsym(lib, "main");
-                            if (main_ == NULL)
-                                fmt::print("Could not load main() in {}\n{}\n", fn, dlerror());
+                            main_ = get_function<MainType>(lib, "main");
 
-                            SetContextType set_contexts = (SetContextType) dlsym(lib, "henson_set_contexts");
-                            if (set_contexts == NULL)
-                                fmt::print("Could not load henson_set_contexts() in {}\n{}\n", fn, dlerror());
-                            set_contexts(&from_, &to_);
-
-                            SetWorldType set_world = (SetWorldType) dlsym(lib, "henson_set_world");
-                            if (set_world == NULL)
-                                fmt::print("Could not load henson_set_world() in {}\n{}\n", fn, dlerror());
-                            set_world(world);
+                            get_function<SetContextType>(lib, "henson_set_contexts")(&from_, &to_);
+                            get_function<SetWorldType>  (lib, "henson_set_world")(world);
+                            get_function<SetNameMapType>(lib, "henson_set_namemap")(namemap);
 
                             to_ = bc::make_fcontext(&stack_[0] + stack_.size(), stack_.size(), exec);
                         }
@@ -49,7 +46,16 @@ struct Puppet
 
     static void         exec(intptr_t self_)    { Puppet* self = (Puppet*) self_; self->running_ = true; self->main_(self->argc_,self->argv_); self->running_ = false; self->yield(); }
 
+    template<class T>
+    T                   get_function(void* lib, const char* name)
+    {
+        T f = (T) dlsym(lib, name);
+        if (f == NULL)
+            throw std::runtime_error(fmt::format("Could not load {}() in {}\n{}\n", name, filename_, dlerror()));
+        return f;
+    }
 
+    std::string         filename_;
     int                 argc_;
     char**              argv_;
     std::vector<char>   stack_;
@@ -82,14 +88,21 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    Puppet  simulation(simulation_fn, 0, 0, world);
-    Puppet  analysis(analysis_fn, 0, 0, world);
+    henson::NameMap     namemap;
+
+    Puppet  simulation(simulation_fn, 0, 0, world, &namemap);
+    Puppet  analysis  (analysis_fn,   0, 0, world, &namemap);
 
     do
     {
         simulation.proceed();
         if (!simulation.running())
             break;
+
+        // reset namemap (so analysis can read from it)
+        for (henson::NameMap::iterator it = namemap.begin(); it != namemap.end(); ++it)
+            it->second.reset();
+
         analysis.proceed();
     } while (true);
 

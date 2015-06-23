@@ -1,8 +1,10 @@
-#include <stdio.h>
+#include <cstdio>
+#include <cassert>
 #include <unistd.h>
 #include <mpi.h>
 
-#include "henson/context.h"
+#include <henson/data.h>
+#include <henson/context.h>
 
 int main(int argc, char** argv)
 {
@@ -16,7 +18,20 @@ int main(int argc, char** argv)
     while(true)
     {
         sleep(rank);
-        printf("Analysis   [t=%d]: rank = %d out of %d\n", t, rank, size);
+
+        float* data;
+        size_t count;
+        size_t type;
+        size_t stride;
+        henson_load_array("data", (void**) &data, &type, &count, &stride);
+        assert(type == sizeof(float));
+
+        float sum = 0;
+        for (size_t i = 0; i < count; ++i)
+            sum += data[i];
+
+        printf("Analysis   [t=%d]: rank = %d out of %d : sum = %f\n", t, rank, size, sum);
+
         henson_yield();
         ++t;
     }

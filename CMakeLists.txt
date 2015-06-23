@@ -21,7 +21,7 @@ include_directories         (${CMAKE_CURRENT_BINARY_DIR}
                              ${CMAKE_CURRENT_SOURCE_DIR}/include
                              SYSTEM ${MPI_INCLUDE_PATH})
 
-add_library                 (henson_lib src/context.cpp)
+add_library                 (henson_lib src/context.cpp src/data.cpp)
 set_target_properties       (henson_lib PROPERTIES OUTPUT_NAME henson)
 
 add_executable              (simulation simulation.c)
@@ -35,7 +35,8 @@ target_link_libraries       (henson ${libraries} ${Boost_CONTEXT_LIBRARY})
 
 if                          (NOT APPLE)
    set                      (linker_flags "-pie -Wl,--export-dynamic")
+   set                      (linker_flags "${linker_flags} -Wl,-u,henson_set_contexts,-u,henson_set_namemap")
    set_target_properties    (simulation PROPERTIES LINK_FLAGS ${linker_flags})
-   set_target_properties    (analysis PROPERTIES LINK_FLAGS ${linker_flags})
+   set_target_properties    (analysis   PROPERTIES LINK_FLAGS ${linker_flags})
 endif                       (NOT APPLE)
 
