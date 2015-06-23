@@ -16,20 +16,28 @@ struct Puppet
 {
     typedef             int  (*MainType)(int argc, char *argv[]);
     typedef             void (*SetContextType)(void* parent, void* local);
+    typedef             void (*SetWorldType)(MPI_Comm world);
 
-                        Puppet(const std::string& fn, int argc, char** argv):
+                        Puppet(const std::string& fn, int argc, char** argv, MPI_Comm world):
                             argc_(argc), argv_(argv),
                             //stack_(bc::stack_traits::default_size())      // requires Boost 1.58
                             stack_(1024*1024)
                         {
                             void* lib = dlopen(fn.c_str(), RTLD_LAZY);
+
                             main_ = (MainType) dlsym(lib, "main");
                             if (main_ == NULL)
                                 fmt::print("Could not load main() in {}\n{}\n", fn, dlerror());
+
                             SetContextType set_contexts = (SetContextType) dlsym(lib, "set_contexts");
                             if (set_contexts == NULL)
                                 fmt::print("Could not load set_contexts() in {}\n{}\n", fn, dlerror());
                             set_contexts(&from_, &to_);
+
+                            SetWorldType set_world = (SetWorldType) dlsym(lib, "set_world");
+                            if (set_world == NULL)
+                                fmt::print("Could not load set_world() in {}\n{}\n", fn, dlerror());
+                            set_world(world);
 
                             to_ = bc::make_fcontext(&stack_[0] + stack_.size(), stack_.size(), exec);
                         }
@@ -74,8 +82,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    Puppet  simulation(simulation_fn, 0, 0);
-    Puppet  analysis(analysis_fn, 0, 0);
+    Puppet  simulation(simulation_fn, 0, 0, world);
+    Puppet  analysis(analysis_fn, 0, 0, world);
 
     do
     {

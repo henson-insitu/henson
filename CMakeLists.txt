@@ -21,11 +21,13 @@ include_directories         (${CMAKE_CURRENT_BINARY_DIR}
                              ${CMAKE_CURRENT_SOURCE_DIR}/include
                              SYSTEM ${MPI_INCLUDE_PATH})
 
-add_executable              (simulation simulation.c src/context.cpp)
-target_link_libraries       (simulation ${mpi_libraries} ${Boost_CONTEXT_LIBRARY})
+add_library                 (context src/context.cpp src/format.cc)
 
-add_executable              (analysis analysis.cpp src/context.cpp)
-target_link_libraries       (analysis ${mpi_libraries} ${Boost_CONTEXT_LIBRARY})
+add_executable              (simulation simulation.c)
+target_link_libraries       (simulation context ${mpi_libraries} ${Boost_CONTEXT_LIBRARY})
+
+add_executable              (analysis analysis.cpp)
+target_link_libraries       (analysis context ${mpi_libraries} ${Boost_CONTEXT_LIBRARY})
 
 add_executable              (henson henson.cpp src/format.cc)
 target_link_libraries       (henson ${libraries} ${Boost_CONTEXT_LIBRARY})

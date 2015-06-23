@@ -6,7 +6,7 @@
 
 int main(int argc, char** argv)
 {
-    MPI_Comm world = MPI_COMM_WORLD;
+    MPI_Comm world = get_world();
 
     int rank, size;
     MPI_Comm_rank(world, &rank);
