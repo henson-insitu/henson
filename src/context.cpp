@@ -9,25 +9,25 @@ static fcontext_t* local  = 0;
 
 static MPI_Comm    world  = MPI_COMM_WORLD;
 
-void yield()
+void henson_yield()
 {
     if (parent == 0 || local == 0)      // not running under henson; do nothing
         return;
     boost::context::jump_fcontext(local, *parent, 0);
 }
 
-void set_contexts(void* p, void* l)
+void henson_set_contexts(void* p, void* l)
 {
     parent = (fcontext_t*) p;
     local  = (fcontext_t*) l;
 }
 
-void set_world(MPI_Comm w)
+void henson_set_world(MPI_Comm w)
 {
     world = w;
 }
 
-MPI_Comm get_world()
+MPI_Comm henson_get_world()
 {
     return world;
 }

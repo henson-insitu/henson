@@ -6,7 +6,7 @@
 
 int main(int argc, char** argv)
 {
-    MPI_Comm world = get_world();
+    MPI_Comm world = henson_get_world();
 
     int rank, size;
     MPI_Comm_rank(world, &rank);
@@ -17,7 +17,7 @@ int main(int argc, char** argv)
     {
         sleep(rank);
         printf("Analysis   [t=%d]: rank = %d out of %d\n", t, rank, size);
-        yield();
+        henson_yield();
         ++t;
     }
 

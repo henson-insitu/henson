@@ -21,7 +21,7 @@ include_directories         (${CMAKE_CURRENT_BINARY_DIR}
                              ${CMAKE_CURRENT_SOURCE_DIR}/include
                              SYSTEM ${MPI_INCLUDE_PATH})
 
-add_library                 (henson_lib src/context.cpp src/data.cpp)
+add_library                 (henson_lib src/context.cpp)
 set_target_properties       (henson_lib PROPERTIES OUTPUT_NAME henson)
 
 add_executable              (simulation simulation.c)

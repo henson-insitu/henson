@@ -29,14 +29,14 @@ struct Puppet
                             if (main_ == NULL)
                                 fmt::print("Could not load main() in {}\n{}\n", fn, dlerror());
 
-                            SetContextType set_contexts = (SetContextType) dlsym(lib, "set_contexts");
+                            SetContextType set_contexts = (SetContextType) dlsym(lib, "henson_set_contexts");
                             if (set_contexts == NULL)
-                                fmt::print("Could not load set_contexts() in {}\n{}\n", fn, dlerror());
+                                fmt::print("Could not load henson_set_contexts() in {}\n{}\n", fn, dlerror());
                             set_contexts(&from_, &to_);
 
-                            SetWorldType set_world = (SetWorldType) dlsym(lib, "set_world");
+                            SetWorldType set_world = (SetWorldType) dlsym(lib, "henson_set_world");
                             if (set_world == NULL)
-                                fmt::print("Could not load set_world() in {}\n{}\n", fn, dlerror());
+                                fmt::print("Could not load henson_set_world() in {}\n{}\n", fn, dlerror());
                             set_world(world);
 
                             to_ = bc::make_fcontext(&stack_[0] + stack_.size(), stack_.size(), exec);

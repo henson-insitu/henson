@@ -7,11 +7,11 @@
 extern "C" {
 #endif
 
-void        yield();
-void        set_contexts(void* parent, void* local);
+void        henson_yield();
+void        henson_set_contexts(void* parent, void* local);
 
-MPI_Comm    get_world();
-void        set_world(MPI_Comm world);
+MPI_Comm    henson_get_world();
+void        henson_set_world(MPI_Comm world);
 
 #ifdef __cplusplus
 }
