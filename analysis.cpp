@@ -8,6 +8,12 @@
 
 int main(int argc, char** argv)
 {
+    if (!henson_active())
+    {
+        printf("Must run under henson, but henson is not active\n");
+        return 1;
+    }
+
     MPI_Comm world = henson_get_world();
 
     int rank, size;
@@ -17,7 +23,7 @@ int main(int argc, char** argv)
     int t = 0;
     while(true)
     {
-        sleep(rank);
+        //sleep(rank);
 
         float* data;
         size_t count;
@@ -30,7 +36,7 @@ int main(int argc, char** argv)
         for (size_t i = 0; i < count; ++i)
             sum += data[i];
 
-        printf("Analysis   [t=%d]: rank = %d out of %d : sum = %f\n", t, rank, size, sum);
+        printf("[%d]: Analysis   [t=%d]: sum = %f\n", rank, t, rank, sum);
 
         henson_yield();
         ++t;

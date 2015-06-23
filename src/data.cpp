@@ -14,8 +14,6 @@ void        henson_set_namemap(void* nm)
 void        henson_save_array(const char* name, void* address, size_t type, size_t count, size_t stride)
 {
     if (!namemap) return;
-
-    printf("Saving array: %s %p %lu %lu %lu\n", name, address, type, count, stride);
     diy::save((*namemap)[name], henson::io::Array(address, type, count, stride));
 }
 

@@ -28,7 +28,7 @@ int main(int argc, char** argv)
     int t;
     for (t = 0; t < 3; ++t)
     {
-        sleep(rank);
+        //sleep(rank);
 
         int n = 50;
         float* array = malloc(n * sizeof(float));
@@ -38,7 +38,7 @@ int main(int argc, char** argv)
         float sum = 0;
         for (size_t i = 0; i < n; ++i)
             sum += array[i];
-        printf("Simulation [t=%d]: rank = %d out of %d : %f\n", t, rank, size, sum);
+        printf("[%d]: Simulation [t=%d]: sum = %f\n", rank, t, sum);
 
         henson_save_array("data", array, sizeof(float), n, sizeof(float));
         henson_yield();

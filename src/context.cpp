@@ -9,6 +9,11 @@ static fcontext_t* local  = 0;
 
 static MPI_Comm    world  = MPI_COMM_WORLD;
 
+int  henson_active()
+{
+    return (parent != 0 && local != 0);
+}
+
 void henson_yield()
 {
     if (parent == 0 || local == 0)      // not running under henson; do nothing

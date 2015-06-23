@@ -7,6 +7,7 @@
 extern "C" {
 #endif
 
+int         henson_active();
 void        henson_yield();
 void        henson_set_contexts(void* parent, void* local);
 

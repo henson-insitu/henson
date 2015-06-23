@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(world, &rank);
     MPI_Comm_size(world, &size);
 
-    fmt::print("henson: {} out of {}\n", rank, size);
+    fmt::print("[{}]: henson started; total processes = {}\n", rank, size);
 
     using namespace opts;
     Options ops(argc, argv);
