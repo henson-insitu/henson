@@ -2,19 +2,17 @@
 
 #include <boost/context/fcontext.hpp>
 
-#include <format.h>
-
 typedef     boost::context::fcontext_t      fcontext_t;
 
-static fcontext_t* parent;
-static fcontext_t* local;
+static fcontext_t* parent = 0;
+static fcontext_t* local  = 0;
 
-static MPI_Comm    world;
+static MPI_Comm    world  = MPI_COMM_WORLD;
 
 void yield()
 {
-    if (local == 0 || parent == 0)
-        fmt::print("Warning local or parent are zero\n");
+    if (parent == 0 || local == 0)      // not running under henson; do nothing
+        return;
     boost::context::jump_fcontext(local, *parent, 0);
 }
 
