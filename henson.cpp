@@ -104,6 +104,10 @@ int main(int argc, char *argv[])
             it->second.reset();
 
         analysis.proceed();
+
+        // reset namemap (so analysis can read from it)
+        for (henson::NameMap::iterator it = namemap.begin(); it != namemap.end(); ++it)
+            it->second.reset();
     } while (true);
 
     fmt::print("[{}]: henson done\n", rank);

@@ -36,7 +36,7 @@ int main(int argc, char** argv)
         for (size_t i = 0; i < count; ++i)
             sum += data[i];
 
-        printf("[%d]: Analysis   [t=%d]: sum = %f\n", rank, t, rank, sum);
+        printf("[%d]: Analysis   [t=%d]: sum = %f\n", rank, t, sum);
 
         henson_yield();
         ++t;
