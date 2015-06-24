@@ -65,10 +65,16 @@ class NameMap
         DataMap     values_;
 };
 
-void    save(const std::string& name, DataType* x);
+void        save(const std::string& name, DataType* x);
+
+NameMap*    get_namemap();
 
 template<class T>
-T*      load(const std::string& name);
+T*          load(const std::string& name)
+{
+    if (!get_namemap()) return 0;
+    return get_namemap()->get<T>(name);
+}
 
 }
 

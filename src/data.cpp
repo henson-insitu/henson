@@ -66,10 +66,8 @@ henson::save(const std::string& name, DataType* x)
     namemap->add(name, x);
 }
 
-template<class T>
-T*
-load(const std::string& name)
+henson::NameMap*
+henson::get_namemap()
 {
-    if (!namemap) return;
-    return namemap->get<T>(name);
+    return namemap;
 }
