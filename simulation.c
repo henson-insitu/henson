@@ -12,9 +12,7 @@ int main(int argc, char** argv)
     // Under henson, MPI will be initialized before we are launched;
     // still need to initialize MPI in the stand-alone mode,
     // so initialize it if it's not already initialized
-    int mpi_initialized;
-    MPI_Initialized(&mpi_initialized);
-    if (!mpi_initialized)
+    if (!henson_active())
         MPI_Init(&argc, &argv);
 
     MPI_Comm world = henson_get_world();
@@ -46,7 +44,7 @@ int main(int argc, char** argv)
         free(array);
     }
 
-    if (!mpi_initialized)       // we initialized MPI
+    if (!henson_active())       // we initialized MPI
         MPI_Finalize();
 
     return 0;
