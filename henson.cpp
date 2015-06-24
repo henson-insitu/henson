@@ -13,7 +13,7 @@ namespace bc = boost::context;
 #include <opts/opts.h>
 #include <format.h>
 
-#include <henson/namemap.hpp>
+#include <henson/data.hpp>
 
 struct Puppet
 {
@@ -99,15 +99,7 @@ int main(int argc, char *argv[])
         if (!simulation.running())
             break;
 
-        // reset namemap (so analysis can read from it)
-        for (henson::NameMap::iterator it = namemap.begin(); it != namemap.end(); ++it)
-            it->second.reset();
-
         analysis.proceed();
-
-        // reset namemap (so analysis can read from it)
-        for (henson::NameMap::iterator it = namemap.begin(); it != namemap.end(); ++it)
-            it->second.reset();
     } while (true);
 
     fmt::print("[{}]: henson done\n", rank);
