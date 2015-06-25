@@ -1,3 +1,8 @@
+#include <vector>
+#include <string>
+#include <iostream>
+#include <fstream>
+
 #include <mpi.h>
 
 #include <opts/opts.h>
@@ -5,6 +10,59 @@
 
 #include <henson/puppet.hpp>
 #include <henson/data.hpp>
+namespace h = henson;
+
+
+struct CommandLine
+{
+    // need to disallow copy to avoid pitfalls with the argv pointers into arguments
+
+                                CommandLine()                   =default;
+                                CommandLine(const CommandLine&) =delete;
+                                CommandLine(CommandLine&&)      =default;
+
+    CommandLine&                operator=(const CommandLine&)   =delete;
+    CommandLine&                operator=(CommandLine&&)        =default;
+
+    const std::string&          executable() const              { return arguments[0]; }
+
+    std::vector<std::string>    arguments;
+    std::vector<char*>          argv;
+};
+
+std::vector<CommandLine>
+parse_script(const std::string& filename)
+{
+    std::ifstream   in(filename.c_str());
+    std::string     line;
+
+    std::vector<CommandLine>    commands;
+
+    while (std::getline(in,line))
+    {
+        if (line.empty() || line[0] == '#')
+            continue;
+
+        CommandLine cmd;
+        size_t prev = 0, pos = 0;
+        while (pos != std::string::npos)
+        {
+            pos = line.find(' ', pos + 1);
+
+            std::string str = line.substr(prev, pos == std::string::npos ? line.size() - prev : pos - prev);
+            cmd.arguments.push_back(str);
+
+            prev = pos;
+        }
+
+        for (auto& s : cmd.arguments)
+            cmd.argv.push_back(const_cast<char*>(s.c_str()));
+
+        commands.push_back(std::move(cmd));
+    }
+
+    return commands;
+}
 
 
 int main(int argc, char *argv[])
@@ -22,28 +80,33 @@ int main(int argc, char *argv[])
     using namespace opts;
     Options ops(argc, argv);
 
-    // TODO: parse a rudimentary script describing the puppets
-
-    std::string simulation_fn, analysis_fn;
+    std::string script_fn;
     if (  ops >> Present('h', "help", "show help") ||
-        !(ops >> PosOption(simulation_fn) >> PosOption(analysis_fn)))
+        !(ops >> PosOption(script_fn)))
     {
-        fmt::print("Usage: {} SIMULATION ANALYSIS\n{}", argv[0], ops);
+        fmt::print("Usage: {} SCRIPT\n{}", argv[0], ops);
         return 1;
     }
 
-    henson::NameMap     namemap;
+    auto command_lines = parse_script(script_fn);
 
-    henson::Puppet  simulation(simulation_fn, 0, 0, world, &namemap);
-    henson::Puppet  analysis  (analysis_fn,   0, 0, world, &namemap);
+    henson::NameMap             namemap;        // global namespace shared by the puppets
+
+    std::vector<std::unique_ptr<h::Puppet>>     puppets;
+    for (CommandLine& cmd_line : command_lines)
+        puppets.emplace_back(new h::Puppet(cmd_line.executable(), cmd_line.argv.size(), &cmd_line.argv[0], world, &namemap));
 
     do
     {
-        simulation.proceed();
-        if (!simulation.running())
-            break;
+        for (size_t i = 0; i < puppets.size(); ++i)
+        {
+            auto& puppet = *puppets[i];
 
-        analysis.proceed();
+            puppet.proceed();
+
+            if (i == 0 && !puppet.running())    // 0-th puppet is assumed to be the simulation; stop if its done
+                break;
+        }
     } while (true);
 
     fmt::print("[{}]: henson done\n", rank);

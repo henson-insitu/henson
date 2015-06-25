@@ -33,6 +33,7 @@ target_link_libraries       (analysis henson_lib ${mpi_libraries} ${Boost_CONTEX
 
 add_executable              (henson henson.cpp src/format.cc)
 target_link_libraries       (henson ${libraries} ${Boost_CONTEXT_LIBRARY})
+set_target_properties       (henson PROPERTIES COMPILE_FLAGS "-std=c++11")
 
 if                          (NOT APPLE)
    set                      (linker_flags "-pie -Wl,--export-dynamic")

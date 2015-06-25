@@ -37,10 +37,26 @@ struct Puppet
 
                             get_function<SetContextType>(lib, "henson_set_contexts")(&from_, &to_);
                             get_function<SetWorldType>  (lib, "henson_set_world")(world);
-                            get_function<SetNameMapType>(lib, "henson_set_namemap")(namemap);
+
+                            try
+                            {
+                                get_function<SetNameMapType>(lib, "henson_set_namemap")(namemap);
+                            } catch(std::runtime_error& e)
+                            {
+                                // it's a weird situation, but possible if the puppet doesn't need to get any data in or out
+                                // (the linker may choose not to pull src/data.cpp and so henson_set_namemap will be missing)
+                                fmt::print(std::cerr, "Warning: {}", e.what());
+                                fmt::print(std::cerr, "Reasonable only if {} doesn't need to exchange any data\n", filename_);
+                            }
 
                             to_ = bc::make_fcontext(&stack_[0] + stack_.size(), stack_.size(), exec);
                         }
+
+                        Puppet(const Puppet&)   =delete;
+                        Puppet(Puppet&&)        =default;
+
+    Puppet&             operator=(const Puppet&)=delete;
+    Puppet&             operator=(Puppet&&)     =default;
 
     void                proceed()               { bc::jump_fcontext(&from_, to_, (intptr_t) this); }
     void                yield()                 { bc::jump_fcontext(&to_, from_, 0); }
