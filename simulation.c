@@ -21,6 +21,11 @@ int main(int argc, char** argv)
     MPI_Comm_rank(world, &rank);
     MPI_Comm_size(world, &size);
 
+    size_t n = 50;
+    if (argc > 1)
+        n = atoi(argv[1]);
+    printf("Using %zu random numbers\n", n);
+
     srand(time(NULL) + rank);
 
     int t;
@@ -28,7 +33,6 @@ int main(int argc, char** argv)
     {
         //sleep(rank);
 
-        int n = 50;
         float* array = malloc(n * sizeof(float));
         for (size_t i = 0; i < n; ++i)
             array[i] = (float) rand() / (float) RAND_MAX;
