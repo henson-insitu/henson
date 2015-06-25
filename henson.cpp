@@ -24,10 +24,10 @@ struct CommandLine
     CommandLine&                operator=(const CommandLine&)   =delete;
     CommandLine&                operator=(CommandLine&&)        =default;
 
-    const std::string&          executable() const              { return arguments[0]; }
+    std::string                 executable() const              { return std::string(arguments[0].begin(), arguments[0].end()); }
 
-    std::vector<std::string>    arguments;
-    std::vector<char*>          argv;
+    std::vector<std::vector<char>>  arguments;
+    std::vector<char*>              argv;
 };
 
 std::vector<CommandLine>
@@ -44,19 +44,19 @@ parse_script(const std::string& filename)
             continue;
 
         CommandLine cmd;
-        size_t prev = 0, pos = 0;
+        int prev = -1, pos = 0;
         while (pos != std::string::npos)
         {
             pos = line.find(' ', pos + 1);
 
-            std::string str = line.substr(prev, pos == std::string::npos ? line.size() - prev : pos - prev);
-            cmd.arguments.push_back(str);
+            cmd.arguments.push_back(std::vector<char>(line.begin() + prev + 1, pos == std::string::npos ? line.end() : line.begin() + pos));
+            cmd.arguments.back().push_back('\0');
 
             prev = pos;
         }
 
         for (auto& s : cmd.arguments)
-            cmd.argv.push_back(const_cast<char*>(s.c_str()));
+            cmd.argv.push_back(&s[0]);
 
         commands.push_back(std::move(cmd));
     }
