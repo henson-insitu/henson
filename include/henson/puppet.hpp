@@ -52,11 +52,13 @@ struct Puppet
                             to_ = bc::make_fcontext(&stack_[0] + stack_.size(), stack_.size(), exec);
                         }
 
+    // can't even move a puppet since the addresses of its from_ and to_ fields
+    // are stored in the modules (saved via henson_set_context, in the constructor above)
                         Puppet(const Puppet&)   =delete;
-                        Puppet(Puppet&&)        =default;
+                        Puppet(Puppet&&)        =delete;
 
     Puppet&             operator=(const Puppet&)=delete;
-    Puppet&             operator=(Puppet&&)     =default;
+    Puppet&             operator=(Puppet&&)     =delete;
 
     void                proceed()               { bc::jump_fcontext(&from_, to_, (intptr_t) this); }
     void                yield()                 { bc::jump_fcontext(&to_, from_, 0); }
