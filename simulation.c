@@ -34,11 +34,12 @@ int main(int argc, char** argv)
         //sleep(rank);
 
         float* array = malloc(n * sizeof(float));
-        for (size_t i = 0; i < n; ++i)
+        size_t i;
+        for (i = 0; i < n; ++i)
             array[i] = (float) rand() / (float) RAND_MAX;
 
         float sum = 0;
-        for (size_t i = 0; i < n; ++i)
+        for (i = 0; i < n; ++i)
             sum += array[i];
         printf("[%d]: Simulation [t=%d]: sum = %f\n", rank, t, sum);
 
