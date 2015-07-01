@@ -97,6 +97,7 @@ int main(int argc, char *argv[])
     for (CommandLine& cmd_line : command_lines)
         puppets.emplace_back(new h::Puppet(cmd_line.executable(), cmd_line.argv.size(), &cmd_line.argv[0], world, &namemap));
 
+    bool stop_execution = false;
     do
     {
         for (size_t i = 0; i < puppets.size(); ++i)
@@ -106,9 +107,12 @@ int main(int argc, char *argv[])
             puppet.proceed();
 
             if (i == 0 && !puppet.running())    // 0-th puppet is assumed to be the simulation; stop if its done
+            {
+                stop_execution = true;
                 break;
+            }
         }
-    } while (true);
+    } while (!stop_execution);
 
     fmt::print("[{}]: henson done\n", rank);
 
