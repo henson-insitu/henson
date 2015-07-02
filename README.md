@@ -110,8 +110,8 @@ In C++, there are additional functions:
   * `henson::save(name, x)`
   * `template<class T> T* henson::load(name)`
 
-See [include/henson/data.h](src/master/include/henson/data.h) and
-[include/henson/data.hpp](src/master/include/henson/data.hpp)
+See [include/henson/data.h](include/henson/data.h) and
+[include/henson/data.hpp](include/henson/data.hpp)
 for more details.
 
 ### Producer
@@ -189,7 +189,7 @@ complicated part of using Henson.
 
 ### Sample henson script
 
-See [simulation.c](src/master/simulation.c) and [analysis.cpp](src/master/analysis.cpp) for sample code.
+See [simulation.c](simulation.c) and [analysis.cpp](analysis.cpp) for sample code.
 
 ```
 sample.hwl:
