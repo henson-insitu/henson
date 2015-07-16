@@ -15,7 +15,6 @@
 #include <henson/hwl.hpp>
 namespace h = henson;
 
-
 struct CommandLine
 {
     // need to disallow copy to avoid pitfalls with the argv pointers into arguments
@@ -64,17 +63,35 @@ int main(int argc, char *argv[])
 
     using namespace opts;
     Options ops(argc, argv);
+    bool show_sizes = ops >> Present('s', "show-sizes", "show group sizes");
 
     std::string script_fn;
     if (  ops >> Present('h', "help", "show help") ||
         !(ops >> PosOption(script_fn)))
     {
-        fmt::print("Usage: {} SCRIPT [procs=SIZE]+\n{}", argv[0], ops);
+        fmt::print("Usage: {} SCRIPT [procs=SIZE]+\n\n", argv[0]);
+        fmt::print("Execute SCRIPT. procs are the names of execution groups in the script.\n");
+        fmt::print("Leftover processors get split evenly among the execution groups in the SCRIPT\n");
+        fmt::print("but not specified in the procs list.\n\n");
+        fmt::print("{}", ops);
         return 1;
     }
 
+    // parse the script
+    hwl::Script script;
+    std::ifstream script_ifs(script_fn.c_str());
+    parser::state ps(script_ifs);
+    bool result = hwl::script(ps, script);
+    if (!result)
+    {
+        fmt::print("Couldn't parse script: {}\n", script_fn);
+        return 1;
+    }
+
+    // parse the procs
     henson::ProcMap::Vector         procs;
     std::string                     procs_size;
+    int                             total_procs = 0;
     while(ops >> PosOption(procs_size))
     {
         int eq_pos = procs_size.find('=');
@@ -83,8 +100,28 @@ int main(int argc, char *argv[])
             fmt::print("Can't parse {}\n", procs_size);
             return 1;
         }
-        procs.emplace_back(procs_size.substr(0, eq_pos), std::stoi(procs_size.substr(eq_pos + 1, procs_size.size() - eq_pos)));
+        int sz = std::stoi(procs_size.substr(eq_pos + 1, procs_size.size() - eq_pos));
+        procs.emplace_back(procs_size.substr(0, eq_pos), sz);
+        total_procs += sz;
     }
+
+    if (total_procs > size)
+    {
+        fmt::print("Specified procs exceed MPI size: {} > {}\n", total_procs, size);
+        return 1;
+    }
+
+    // record assigned groups
+    std::set<std::string>   assigned_procs;
+    for (auto& x : procs)
+        assigned_procs.insert(x.first);
+
+    int unassigned = script.procs.size() - assigned_procs.size();
+
+    // assign unassigned procs
+    for (auto& x : script.procs)
+        if (assigned_procs.find(x.first) == assigned_procs.end())
+            procs.emplace_back(x.first, (size - total_procs) / unassigned);
 
     typedef             std::unique_ptr<h::ProcMap>        ProcMapUniquePtr;
     ProcMapUniquePtr    procmap;        // splits the communicator into groups
@@ -96,22 +133,21 @@ int main(int argc, char *argv[])
         fmt::print("Abort: {}\n", e.what());
         return 1;
     }
+
+    if (rank == 0 && show_sizes)
+    {
+        fmt::print("Group sizes:\n");
+        for (auto& x : script.procs)
+            fmt::print("  {} = {}\n", x.first, procmap->size(x.first));
+    }
+
+
     henson::NameMap                     namemap;        // global namespace shared by the puppets
 
     // convert script into puppets
     // TODO: technically, we don't need to load puppets that we don't need, but I'm guessing it's a small overhead
-    hwl::Script script;
-    std::ifstream script_ifs(script_fn.c_str());
-    parser::state ps(script_ifs);
-    bool result = hwl::script(ps, script);
-    if (!result)
-    {
-        fmt::print("Couldn't parse script: {}\n", script_fn);
-        return 1;
-    }
-
     std::string prefix = script_fn;
-    if (prefix[0] != '/')
+    if (prefix[0] != '/' && prefix[0] != '~')
         prefix = "./" + prefix;
     prefix = prefix.substr(0, prefix.rfind('/') + 1);
 
@@ -129,24 +165,24 @@ int main(int argc, char *argv[])
                                                         &namemap));
     }
 
-    int                     group   = procmap->color();
-    std::string             name    = procs[group].first;
-    const hwl::ControlFlow& control = script.nodes[name];
+    int                     color       = procmap->color();
+    std::string             group       = procs[color].first;
+    int                     group_size  = procs[color].second;
+    const hwl::ControlFlow& control     = script.procs[group];
 
     bool stop_execution = false;
     do
     {
         for (size_t i = 0; i < control.commands.size(); ++i)
         {
-            auto& puppet = *puppets[control.commands[i]];
+            const std::string&  name   = control.commands[i];
+            auto&               puppet = *puppets[name];
 
+            if (stop_execution) puppet.signal_stop();
             puppet.proceed();
 
-            if (i == 0 && !puppet.running())    // 0-th puppet is assumed to be the simulation; stop if its done
-            {
+            if (!puppet.running() && script.control.find(name) != script.control.end())
                 stop_execution = true;
-                break;
-            }
         }
     } while (!stop_execution);
 

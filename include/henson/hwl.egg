@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 
 namespace hwl
 {
@@ -29,28 +30,33 @@ struct ControlFlow
 struct Script
 {
     void add_puppet(PuppetCommand pc)           { puppets.push_back(pc); }
-    void add_nodes(ControlFlow cf)              { nodes.emplace(cf.name, cf); }
+    void add_procs(ControlFlow cf)              { procs.emplace(cf.name, cf); }
 
     std::vector<PuppetCommand>                  puppets;
-    std::map<std::string, ControlFlow>          nodes;
+    std::map<std::string, ControlFlow>          procs;
+    std::set<std::string>                       control;
 };
 
 }
 
 %}
 
-script   : Script               = (  puppet : x     { psVal.add_puppet(x); }
-                                   | nodes  : n     { psVal.add_nodes(n); }
+script   : Script               = (  puppet  : x     { psVal.add_puppet(x); }
+                                   | procs   : p     { psVal.add_procs(p); }
+                                   | control : c     { psVal.control.insert(c); }
                                    | _ nl)*
 
 puppet   : PuppetCommand        = name : n _ '=' _ command : c _ nl     { psVal = { n,c }; }
 
 command  : std::string          = <(!(nl | '#') .)*> : psVal
 
-nodes    : ControlFlow          = name : n _ ':' _ nl execlines : l     { psVal = n; psVal.add_lines(l); }
+procs    : ControlFlow          = name : n _ ':' _ nl execlines : l     { psVal = n; psVal.add_lines(l); }
 
-execline  : std::string              = '\t' name:psVal _ (nl | eof)
-execlines : std::vector<std::string> = ( execline:l { psVal.push_back(l); } )+
+execline  : std::string              = ('\t' | "    ") name:psVal _ (nl | eof)
+execlines : std::vector<std::string> = (  execline:l { psVal.push_back(l); }
+                                        | _ nl )+
+
+control  : std::string          = "control" _ name:psVal _ nl
 
 name     : std::string          = < letter (letter | number)* > : psVal
 

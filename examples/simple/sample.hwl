@@ -1,6 +1,10 @@
+# Run via mpirun -n 4 .../henson sample.hwl
+
 sim = ./simulation 250
 ana = ./analysis
 
 world:
 	sim
 	ana
+
+control sim     # run while sim is running

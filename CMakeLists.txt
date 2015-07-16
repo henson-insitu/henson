@@ -30,3 +30,4 @@ target_link_libraries       (henson ${libraries} ${Boost_CONTEXT_LIBRARY})
 set_target_properties       (henson PROPERTIES COMPILE_FLAGS "-std=c++11")
 
 add_subdirectory            (examples/simple)
+add_subdirectory            (examples/intercomm)

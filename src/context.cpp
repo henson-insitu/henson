@@ -10,6 +10,8 @@ static fcontext_t* local  = 0;
 
 static henson::ProcMap* procmap = 0;
 
+static int*             stop = 0;
+
 int  henson_active()
 {
     return (parent != 0 && local != 0);
@@ -44,4 +46,15 @@ MPI_Comm henson_get_world()
 MPI_Comm    henson_get_intercomm(const char* to)
 {
     return procmap->intercomm(to);
+}
+
+void        henson_set_stop(int* s)
+{
+    stop = s;
+}
+
+int         henson_stop()
+{
+    if (!stop) return 0;
+    return *stop;
 }

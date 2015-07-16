@@ -4,6 +4,7 @@
 #include <mpi.h>
 
 #include <henson/data.h>
+#include <henson/data.hpp>
 #include <henson/context.h>
 
 int main(int argc, char** argv)
@@ -20,27 +21,26 @@ int main(int argc, char** argv)
     MPI_Comm_rank(world, &rank);
     MPI_Comm_size(world, &size);
 
-    int t = 0;
-    while(true)
-    {
-        //sleep(rank);
+    if (henson_stop())
+        return 0;
 
-        float* data;
-        size_t count;
-        size_t type;
-        size_t stride;
-        henson_load_array("data", (void**) &data, &type, &count, &stride);
-        assert(type == sizeof(float));
+    if (!henson::exists("analysis/t"))
+        henson::save("analysis/t", new henson::Value<int>(0));
 
-        float sum = 0;
-        for (size_t i = 0; i < count; ++i)
-            sum += data[i];
+    int& t = henson::load< henson::Value<int> >("analysis/t")->value;
 
-        printf("[%d]: Analysis   [t=%d]: sum = %f\n", rank, t, sum);
+    float* data;
+    size_t count;
+    size_t type;
+    size_t stride;
+    henson_load_array("data", (void**) &data, &type, &count, &stride);
+    assert(type == sizeof(float));
 
-        henson_yield();
-        ++t;
-    }
+    float sum = 0;
+    for (size_t i = 0; i < count; ++i)
+        sum += data[i];
 
-    return 0;
+    printf("[%d]: Analysis   [t=%d]: sum = %f\n", rank, t, sum);
+
+    ++t;
 }

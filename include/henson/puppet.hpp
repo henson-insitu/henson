@@ -27,6 +27,7 @@ struct Puppet
     typedef             void (*SetWorldType)(MPI_Comm world);
     typedef             void (*SetNameMapType)(void* namemap);
     typedef             void (*SetProcMapType)(void* procmap);
+    typedef             void (*SetStopType)(int* stop);
 
                         Puppet(const std::string& fn, int argc, char** argv, ProcMap* procmap, NameMap* namemap):
                             filename_(fn),
@@ -40,6 +41,7 @@ struct Puppet
 
                             get_function<SetContextType>(lib, "henson_set_contexts")(&from_, &to_);
                             get_function<SetProcMapType>(lib, "henson_set_procmap")(procmap);
+                            get_function<SetStopType>   (lib, "henson_set_stop")(&stop_);
 
                             try
                             {
@@ -66,9 +68,11 @@ struct Puppet
     void                proceed()               { bc::jump_fcontext(&from_, to_, (intptr_t) this); }
     void                yield()                 { bc::jump_fcontext(&to_, from_, 0); }
 
+    void                signal_stop()           { stop_ = 1; }
+
     bool                running() const         { return running_; }
 
-    static void         exec(intptr_t self_)    { Puppet* self = (Puppet*) self_; self->running_ = true; self->main_(self->argc_,self->argv_); self->running_ = false; self->yield(); }
+    static void         exec(intptr_t self_)    { while(true) { Puppet* self = (Puppet*) self_; self->running_ = true; self->main_(self->argc_,self->argv_); self->running_ = false; self->yield(); } }
 
     template<class T>
     T                   get_function(void* lib, const char* name)
@@ -87,6 +91,7 @@ struct Puppet
     MainType            main_;
     bc::fcontext_t      from_, to_;
     bool                running_;
+    int                 stop_ = 0;
 };
 
 

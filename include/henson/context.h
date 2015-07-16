@@ -10,6 +10,8 @@ extern "C" {
 int         henson_active();
 void        henson_yield();
 void        henson_set_contexts(void* parent, void* local);
+void        henson_set_stop(int* s);
+int         henson_stop();
 
 void        henson_set_procmap(void* procmap);
 MPI_Comm    henson_get_world();

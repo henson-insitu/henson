@@ -14,7 +14,10 @@ world:
     sim
     ana
 
-mpirun -n 4 henson sample.hwl world=4
+control sim     # run while sim is running
+
+
+mpirun -n 4 henson sample.hwl
 ```
 
 ## Problem and Solution
@@ -131,6 +134,11 @@ See [include/henson/data.h](include/henson/data.h) and
 [include/henson/data.hpp](include/henson/data.hpp)
 for more details.
 
+### Intercommunicators
+
+
+```{.cpp}
+
 ### Producer
 
 ```{.c}
@@ -174,6 +182,8 @@ else
 
 // process the data
 ```
+Note that the non-controlling coroutine will be restarted over and over again until.
+
 
 
 ### Compiling and Linking

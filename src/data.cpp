@@ -66,6 +66,13 @@ henson::save(const std::string& name, DataType* x)
     namemap->add(name, x);
 }
 
+bool
+henson::exists(const std::string& name)
+{
+    if (!namemap) return false;
+    return namemap->exists(name);
+}
+
 henson::NameMap*
 henson::get_namemap()
 {
