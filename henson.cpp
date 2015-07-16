@@ -93,8 +93,7 @@ int main(int argc, char *argv[])
         procmap = ProcMapUniquePtr(new h::ProcMap(world, procs));
     } catch (std::runtime_error& e)
     {
-        if (rank == 0)
-            fmt::print("Abort: {}\n", e.what());
+        fmt::print("Abort: {}\n", e.what());
         return 1;
     }
     henson::NameMap                     namemap;        // global namespace shared by the puppets
@@ -111,6 +110,11 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    std::string prefix = script_fn;
+    if (prefix[0] != '/')
+        prefix = "./" + prefix;
+    prefix = prefix.substr(0, prefix.rfind('/') + 1);
+
     typedef     std::unique_ptr<h::Puppet>          PuppetUniquePtr;
     std::vector<CommandLine>                        command_lines;
     std::map<std::string, PuppetUniquePtr>          puppets;
@@ -118,7 +122,11 @@ int main(int argc, char *argv[])
     {
         command_lines.emplace_back(p.command);
         auto& cmd_line = command_lines.back();
-        puppets[p.name] = PuppetUniquePtr(new h::Puppet(cmd_line.executable(), cmd_line.argv.size(), &cmd_line.argv[0], procmap.get(), &namemap));
+        puppets[p.name] = PuppetUniquePtr(new h::Puppet(prefix + cmd_line.executable(),
+                                                        cmd_line.argv.size(),
+                                                        &cmd_line.argv[0],
+                                                        procmap.get(),
+                                                        &namemap));
     }
 
     int                     group   = procmap->color();
