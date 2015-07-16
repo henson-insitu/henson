@@ -43,6 +43,12 @@ int main(int argc, char** argv)
             sum += array[i];
         printf("[%d]: Simulation [t=%d]: sum = %f\n", rank, t, sum);
 
+        float total_sum;
+        MPI_Reduce(&sum, &total_sum, 1, MPI_FLOAT, MPI_SUM, 0, world);
+
+        if (rank == 0)
+            printf("[%d]: Simulation [t=%d]: total_sum = %f\n", rank, t, total_sum);
+
         henson_save_array("data", array, sizeof(float), n, sizeof(float));
         henson_yield();
 
