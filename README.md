@@ -3,14 +3,18 @@
 
 ## Example
 
-See [simulation.c](simulation.c) and [analysis.cpp](analysis.cpp) for sample code.
+See [simulation.c](examples/simple/simulation.c) and [analysis.cpp](examples/simple/analysis.cpp) for sample code.
 
 ```
 sample.hwl:
-./simulation 1000
-./analysis
+sim = ./simulation 1000
+ana = ./analysis
 
-mpirun -n 4 henson sample.hwl
+world:
+    sim
+    ana
+
+mpirun -n 4 henson sample.hwl world=4
 ```
 
 ## Problem and Solution

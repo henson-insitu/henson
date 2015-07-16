@@ -11,6 +11,8 @@
 
 #include <henson/puppet.hpp>
 #include <henson/data.hpp>
+#include <henson/procs.hpp>
+#include <henson/hwl.hpp>
 namespace h = henson;
 
 
@@ -21,6 +23,22 @@ struct CommandLine
                                 CommandLine()                   =default;
                                 CommandLine(const CommandLine&) =delete;
                                 CommandLine(CommandLine&&)      =default;
+                                CommandLine(const std::string& line)
+    {
+        int prev = -1, pos = 0;
+        while (pos != std::string::npos)
+        {
+            pos = line.find(' ', pos + 1);
+
+            arguments.push_back(std::vector<char>(line.begin() + prev + 1, pos == std::string::npos ? line.end() : line.begin() + pos));
+            arguments.back().push_back('\0');
+
+            prev = pos;
+        }
+
+        for (auto& s : arguments)
+            argv.push_back(&s[0]);
+    }
 
     CommandLine&                operator=(const CommandLine&)   =delete;
     CommandLine&                operator=(CommandLine&&)        =default;
@@ -30,40 +48,6 @@ struct CommandLine
     std::vector<std::vector<char>>  arguments;
     std::vector<char*>              argv;
 };
-
-std::vector<CommandLine>
-parse_script(const std::string& filename)
-{
-    std::ifstream   in(filename.c_str());
-    std::string     line;
-
-    std::vector<CommandLine>    commands;
-
-    while (std::getline(in,line))
-    {
-        if (line.empty() || line[0] == '#')
-            continue;
-
-        CommandLine cmd;
-        int prev = -1, pos = 0;
-        while (pos != std::string::npos)
-        {
-            pos = line.find(' ', pos + 1);
-
-            cmd.arguments.push_back(std::vector<char>(line.begin() + prev + 1, pos == std::string::npos ? line.end() : line.begin() + pos));
-            cmd.arguments.back().push_back('\0');
-
-            prev = pos;
-        }
-
-        for (auto& s : cmd.arguments)
-            cmd.argv.push_back(&s[0]);
-
-        commands.push_back(std::move(cmd));
-    }
-
-    return commands;
-}
 
 
 int main(int argc, char *argv[])
@@ -85,24 +69,68 @@ int main(int argc, char *argv[])
     if (  ops >> Present('h', "help", "show help") ||
         !(ops >> PosOption(script_fn)))
     {
-        fmt::print("Usage: {} SCRIPT\n{}", argv[0], ops);
+        fmt::print("Usage: {} SCRIPT [procs=SIZE]+\n{}", argv[0], ops);
         return 1;
     }
 
-    auto command_lines = parse_script(script_fn);
+    henson::ProcMap::Vector         procs;
+    std::string                     procs_size;
+    while(ops >> PosOption(procs_size))
+    {
+        int eq_pos = procs_size.find('=');
+        if (eq_pos == std::string::npos)
+        {
+            fmt::print("Can't parse {}\n", procs_size);
+            return 1;
+        }
+        procs.emplace_back(procs_size.substr(0, eq_pos), std::stoi(procs_size.substr(eq_pos + 1, procs_size.size() - eq_pos)));
+    }
 
-    henson::NameMap             namemap;        // global namespace shared by the puppets
+    typedef             std::unique_ptr<h::ProcMap>        ProcMapUniquePtr;
+    ProcMapUniquePtr    procmap;        // splits the communicator into groups
+    try
+    {
+        procmap = ProcMapUniquePtr(new h::ProcMap(world, procs));
+    } catch (std::runtime_error& e)
+    {
+        if (rank == 0)
+            fmt::print("Abort: {}\n", e.what());
+        return 1;
+    }
+    henson::NameMap                     namemap;        // global namespace shared by the puppets
 
-    std::vector<std::unique_ptr<h::Puppet>>     puppets;
-    for (CommandLine& cmd_line : command_lines)
-        puppets.emplace_back(new h::Puppet(cmd_line.executable(), cmd_line.argv.size(), &cmd_line.argv[0], world, &namemap));
+    // convert script into puppets
+    // TODO: technically, we don't need to load puppets that we don't need, but I'm guessing it's a small overhead
+    hwl::Script script;
+    std::ifstream script_ifs(script_fn.c_str());
+    parser::state ps(script_ifs);
+    bool result = hwl::script(ps, script);
+    if (!result)
+    {
+        fmt::print("Couldn't parse script: {}\n", script_fn);
+        return 1;
+    }
+
+    typedef     std::unique_ptr<h::Puppet>          PuppetUniquePtr;
+    std::vector<CommandLine>                        command_lines;
+    std::map<std::string, PuppetUniquePtr>          puppets;
+    for (auto& p : script.puppets)
+    {
+        command_lines.emplace_back(p.command);
+        auto& cmd_line = command_lines.back();
+        puppets[p.name] = PuppetUniquePtr(new h::Puppet(cmd_line.executable(), cmd_line.argv.size(), &cmd_line.argv[0], procmap.get(), &namemap));
+    }
+
+    int                     group   = procmap->color();
+    std::string             name    = procs[group].first;
+    const hwl::ControlFlow& control = script.nodes[name];
 
     bool stop_execution = false;
     do
     {
-        for (size_t i = 0; i < puppets.size(); ++i)
+        for (size_t i = 0; i < control.commands.size(); ++i)
         {
-            auto& puppet = *puppets[i];
+            auto& puppet = *puppets[control.commands[i]];
 
             puppet.proceed();
 

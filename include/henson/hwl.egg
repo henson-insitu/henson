@@ -1,0 +1,64 @@
+# HWL PEG
+
+{%
+
+#include <string>
+#include <vector>
+#include <map>
+
+namespace hwl
+{
+
+struct PuppetCommand
+{
+    std::string     name;
+    std::string     command;
+};
+
+struct ControlFlow
+{
+    ControlFlow&    operator=(std::string name_)        { name = name_; return *this; }
+
+    void            add_line(std::string l)                     { commands.push_back(l); }
+    void            add_lines(std::vector<std::string> lines)   { commands = lines; }
+
+    std::string                 name;
+    std::vector<std::string>    commands;
+};
+
+struct Script
+{
+    void add_puppet(PuppetCommand pc)           { puppets.push_back(pc); }
+    void add_nodes(ControlFlow cf)              { nodes.emplace(cf.name, cf); }
+
+    std::vector<PuppetCommand>                  puppets;
+    std::map<std::string, ControlFlow>          nodes;
+};
+
+}
+
+%}
+
+script   : Script               = (  puppet : x     { psVal.add_puppet(x); }
+                                   | nodes  : n     { psVal.add_nodes(n); }
+                                   | _ nl)*
+
+puppet   : PuppetCommand        = name : n _ '=' _ command : c _ nl     { psVal = { n,c }; }
+
+command  : std::string          = <(!(nl | '#') .)*> : psVal
+
+nodes    : ControlFlow          = name : n _ ':' _ nl execlines : l     { psVal = n; psVal.add_lines(l); }
+
+execline  : std::string              = '\t' name:psVal _ (nl | eof)
+execlines : std::vector<std::string> = ( execline:l { psVal.push_back(l); } )+
+
+name     : std::string          = < letter (letter | number)* > : psVal
+
+letter  = [a-z] | [A-Z] | '_'
+number  = [0-9]
+
+comment = '#' ( !nl . )*
+_       = (space | comment)*
+space   = ' ' | '\t'
+nl      = "\n\r" | '\n' | '\r'
+eof     = !.

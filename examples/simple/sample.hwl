@@ -1,0 +1,6 @@
+sim = ./simulation 250
+ana = ./analysis
+
+world:
+	sim
+	ana

@@ -14,6 +14,7 @@
 
 #include <format.h>
 #include <henson/data.hpp>
+#include <henson/procs.hpp>
 
 namespace henson
 {
@@ -25,8 +26,9 @@ struct Puppet
     typedef             void (*SetContextType)(void* parent, void* local);
     typedef             void (*SetWorldType)(MPI_Comm world);
     typedef             void (*SetNameMapType)(void* namemap);
+    typedef             void (*SetProcMapType)(void* procmap);
 
-                        Puppet(const std::string& fn, int argc, char** argv, MPI_Comm world, henson::NameMap* namemap):
+                        Puppet(const std::string& fn, int argc, char** argv, ProcMap* procmap, NameMap* namemap):
                             filename_(fn),
                             argc_(argc), argv_(argv),
                             //stack_(bc::stack_traits::default_size())      // requires Boost 1.58
@@ -37,7 +39,7 @@ struct Puppet
                             main_ = get_function<MainType>(lib, "main");
 
                             get_function<SetContextType>(lib, "henson_set_contexts")(&from_, &to_);
-                            get_function<SetWorldType>  (lib, "henson_set_world")(world);
+                            get_function<SetProcMapType>(lib, "henson_set_procmap")(procmap);
 
                             try
                             {
