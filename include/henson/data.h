@@ -18,6 +18,9 @@ void        henson_load_pointer(const char* name, void** ptr);
 void        henson_save_size_t(const char* name, size_t  x);
 void        henson_load_size_t(const char* name, size_t* x);
 
+void        henson_save_int(const char* name, int  x);
+void        henson_load_int(const char* name, int* x);
+
 #ifdef __cplusplus
 }
 #endif

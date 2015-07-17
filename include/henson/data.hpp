@@ -54,6 +54,8 @@ class NameMap
         template<class T>
         T*          get(const std::string& name) const                  { return static_cast<T*>(values_.find(name)->second); }
 
+        bool        exists(const std::string& name) const               { return values_.find(name) != values_.end(); }
+
         void        clear()                                             { delete_all(); values_.clear(); }
 
                     ~NameMap()                                          { clear(); }
@@ -64,6 +66,8 @@ class NameMap
     private:
         DataMap     values_;
 };
+
+bool        exists(const std::string& name);
 
 void        save(const std::string& name, DataType* x);
 

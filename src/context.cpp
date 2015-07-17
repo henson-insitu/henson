@@ -1,4 +1,5 @@
 #include <henson/context.h>
+#include <henson/procs.hpp>
 
 #include <boost/context/fcontext.hpp>
 
@@ -7,7 +8,9 @@ typedef     boost::context::fcontext_t      fcontext_t;
 static fcontext_t* parent = 0;
 static fcontext_t* local  = 0;
 
-static MPI_Comm    world  = MPI_COMM_WORLD;
+static henson::ProcMap* procmap = 0;
+
+static int*             stop = 0;
 
 int  henson_active()
 {
@@ -27,12 +30,31 @@ void henson_set_contexts(void* p, void* l)
     local  = (fcontext_t*) l;
 }
 
-void henson_set_world(MPI_Comm w)
+void henson_set_procmap(void* pm)
 {
-    world = w;
+    procmap = static_cast<henson::ProcMap*>(pm);
 }
 
 MPI_Comm henson_get_world()
 {
-    return world;
+    if (!procmap)
+        return MPI_COMM_WORLD;
+    else
+        return procmap->local();
+}
+
+MPI_Comm    henson_get_intercomm(const char* to)
+{
+    return procmap->intercomm(to);
+}
+
+void        henson_set_stop(int* s)
+{
+    stop = s;
+}
+
+int         henson_stop()
+{
+    if (!stop) return 0;
+    return *stop;
 }

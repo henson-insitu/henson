@@ -7,6 +7,7 @@
 #include <henson/data.h>
 #include <henson/context.h>
 
+// simulation [NUM [ITER [SLEEP]]]
 int main(int argc, char** argv)
 {
     // Under henson, MPI will be initialized before we are launched;
@@ -24,14 +25,24 @@ int main(int argc, char** argv)
     size_t n = 50;
     if (argc > 1)
         n = atoi(argv[1]);
-    printf("Using %zu random numbers\n", n);
+    if (rank == 0)
+        printf("Using %zu random numbers\n", n);
+
+    int iterations = 3;
+    if (argc > 2)
+        iterations = atoi(argv[2]);
+
+    int sleep_interval = 0;
+    if (argc > 3)
+        sleep_interval = atoi(argv[3]);
 
     srand(time(NULL) + rank);
 
     int t;
-    for (t = 0; t < 3; ++t)
+    for (t = 0; t < iterations; ++t)
     {
-        //sleep(rank);
+        if (sleep_interval)
+            sleep(sleep_interval);
 
         float* array = malloc(n * sizeof(float));
         size_t i;
@@ -49,6 +60,7 @@ int main(int argc, char** argv)
         if (rank == 0)
             printf("[%d]: Simulation [t=%d]: total_sum = %f\n", rank, t, total_sum);
 
+        henson_save_int("t", t);
         henson_save_array("data", array, sizeof(float), n, sizeof(float));
         henson_yield();
 
