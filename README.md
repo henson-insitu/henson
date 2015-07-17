@@ -1,9 +1,24 @@
 # Henson
 
+## Contents
+
+  * [Example][]
+  * [Problem and Solution][]
+  * [Code][]
+    - [Headers][]
+    - [MPI Initialization][]
+    - [Control Transfer][]
+    - [Data Exchange][]
+    - [Execution Groups][]
+  * [HWL][]
+  * [Compiling and Linking][]
 
 ## Example
 
-See [simulation.c](examples/simple/simulation.c) and [analysis.cpp](examples/simple/analysis.cpp) for sample code.
+See [simulation.c][] and [analysis.cpp][] in [examples/simple][examples/simple] for sample code.
+
+[simulation.c]:     examples/simple/simulation.c
+[analysis.cpp]:     examples/simple/analysis.cpp
 
 ```
 sample.hwl:
@@ -19,6 +34,10 @@ control sim     # run while sim is running
 
 mpirun -n 4 henson sample.hwl
 ```
+
+Other examples:
+
+  * [examples/intercomm](examples/intercomm) illustrates multiple execution groups.
 
 ## Problem and Solution
 
@@ -90,12 +109,9 @@ moving data across coroutines.
 Since all executables become part of the main `henson` process, MPI must be
 initialized only once. `henson` takes care of the initialization, so, when
 running under it, coroutines cannot initialize MPI themselves.
-`henson_get_world()` returns the MPI communicator. Currently, it is not
-strictly necessary to call this function under [MPICH](http://www.mpich.org),
-where `MPI_COMM_WORLD` is a constant. But it is necessary under
-[OpenMPI](http://www.open-mpi.org). And it will become always necessary once `henson`
-is capable of launching different executables on different nodes.
-(`henson` will split the world communicator appropriately.)
+`henson_get_world()` returns the MPI communicator.
+(This communicator may be different from `MPI_COMM_WORLD` if multiple
+[execution groups][Execution Groups] are used.)
 
 ```{.c}
 if (!henson_active())
@@ -112,9 +128,12 @@ if (!henson_active())
 ### Control Transfer
 
 A coroutine can transfer control back to `henson` by calling `henson_yield()`.
-`henson` in turn decides where to continue execution next. (Current
-implementation simply cycles through all coroutines in order until the first
-one terminates.)
+`henson` in turn decides where to continue execution next. `henson` cycles
+through all coroutines in an [execution group][Execution Groups] in order until
+any coroutine designated as a `control` terminates. Once this happens, every
+remaining coroutine in the group loop gets called once. A coroutine may check
+if its execution group is about to stop (i.e., if a controlling coroutine has
+indicated that it's done) by calling `henson_stop()`.
 
 ### Data Exchange
 
@@ -134,12 +153,7 @@ See [include/henson/data.h](include/henson/data.h) and
 [include/henson/data.hpp](include/henson/data.hpp)
 for more details.
 
-### Intercommunicators
-
-
-```{.cpp}
-
-### Producer
+#### Producer
 
 ```{.c}
 for (/* every timestep */)
@@ -151,7 +165,7 @@ for (/* every timestep */)
 }
 ```
 
-### Consumer
+#### Consumer
 
 Process every time step:
 ```{.c}
@@ -182,11 +196,79 @@ else
 
 // process the data
 ```
-Note that the non-controlling coroutine will be restarted over and over again until.
+Note that the non-controlling coroutine will be restarted over and over again
+as long the controlling coroutine is running. So if the producer generates data
+over multiple time-steps, it's fine to supply a consumer that processes only
+a single snapshot; it will be restarted automatically. See [HWL][].
 
 
+### Execution Groups
 
-### Compiling and Linking
+Different sets of processors may run through different coroutine loops. For
+example, the simulation and analysis may run on different processes;
+they could switch contexts with additional coroutines that exchange the data
+between the groups. The user may specify the different execution groups in the
+script supplied to `henson`, specifying the number of processors to dedicate to
+each group on the command-line. (If no group sizes are specified, the processes
+are split evenly between the groups.)
+[examples/intercomm/intercomm.hwl](examples/intercomm/intercomm.hwl) implements
+such a pattern. Instead of switching directly to [analysis.cpp][],
+[simulation.c][] switches to [send.cpp][], which sends its data over MPI to
+[receive.cpp][] on a different set of processes; [receive.cpp][] in turn
+switches to [analysis.cpp][].
+
+[send.cpp]:     examples/intercomm/send.cpp
+[receive.cpp]:  examples/intercomm/receive.cpp
+
+`henson_get_world()` returns the communicator restricted to each execution
+group. To communicate across groups, [send.cpp][] and [receive.cpp][] use
+`henson_get_intercomm(group_name)` to get the appropriate MPI inter-communicator.
+
+Section [HWL][] describes how to specify execution groups in the scripts
+supplied to `henson`.
+
+## HWL
+
+The following annotated example
+(original in [intercomm.hwl](examples/intercomm/intercomm.hwl))
+illustrates the syntax of the scripts supplied to henson.
+(A simpler example is [sample.hwl](examples/simple/sample.hwl).)
+
+First, the script specifies the command lines to run and assigns them names.
+(These commands become the coroutines.)
+```
+sim = ../simple/simulation 250
+snd = ./send
+rcv = ./receive
+ana = ../simple/analysis
+```
+
+Next, the script specifies two execution groups, `producer` and `consumer`. The
+former cycles through coroutines `sim` and `snd`; the latter cycles through
+`rcv` and `ana`.
+```
+producer:
+	sim
+	snd
+
+consumer:
+	rcv
+	ana
+```
+
+Finally, the script specifies that `sim` and `rcv` control execution. I.e.,
+`producer` group will stop when `sim` stops. `consumer` group stops when `rcv`
+does. Notice that for `rcv` to find out that no more data will arrive, `snd`
+needs to send it the appropriate message. Accordingly, [send.cpp][] checks whether
+`producer` group is stopping by calling `henson_stop()`, and sends the stop
+message when this happens.
+```
+control sim         # run producer until sim stops
+control rcv         # run consumer until rcv stops
+```
+
+
+## Compiling and Linking
 
 Henson depends on [Boost](http://www.boost.org) `>=1.57`, specifically, the
 Boost.Context library, responsible for switching contexts between the
