@@ -2,16 +2,16 @@
 
 ## Contents
 
-  * [Example][]
-  * [Problem and Solution][]
-  * [Code][]
-    - [Headers][]
-    - [MPI Initialization][]
-    - [Control Transfer][]
-    - [Data Exchange][]
-    - [Execution Groups][]
-  * [HWL][]
-  * [Compiling and Linking][]
+  * [Example](#markdown-header-example)
+  * [Problem and Solution](#markdown-header-problem-and-solution)
+  * [Code](#markdown-header-code)
+    - [Headers](#markdown-header-headers)
+    - [MPI Initialization](#markdown-header-mpi-initialization)
+    - [Control Transfer](#markdown-header-control-transfer)
+    - [Data Exchange](#markdown-header-data-exchange)
+    - [Execution Groups](#markdown-header-execution-groups)
+  * [HWL](#markdown-header-hwl)
+  * [Compiling and Linking](#markdown-header-compiling-and-linking)
 
 ## Example
 
