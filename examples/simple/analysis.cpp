@@ -7,6 +7,7 @@
 #include <henson/data.hpp>
 #include <henson/context.h>
 
+// simulation [SLEEP]
 int main(int argc, char** argv)
 {
     if (!henson_active())
@@ -14,6 +15,10 @@ int main(int argc, char** argv)
         printf("Must run under henson, but henson is not active\n");
         return 1;
     }
+
+    int sleep_interval = 0;
+    if (argc > 1)
+        sleep_interval = atoi(argv[1]);
 
     MPI_Comm world = henson_get_world();
 
@@ -24,10 +29,11 @@ int main(int argc, char** argv)
     if (henson_stop())
         return 0;
 
-    if (!henson::exists("analysis/t"))
-        henson::save("analysis/t", new henson::Value<int>(0));
+    int t;
+    henson_load_int("t", &t);
 
-    int& t = henson::load< henson::Value<int> >("analysis/t")->value;
+    if (sleep_interval)
+        sleep(sleep_interval);
 
     float* data;
     size_t count;
@@ -41,6 +47,4 @@ int main(int argc, char** argv)
         sum += data[i];
 
     printf("[%d]: Analysis   [t=%d]: sum = %f\n", rank, t, sum);
-
-    ++t;
 }

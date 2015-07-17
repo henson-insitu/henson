@@ -37,7 +37,8 @@ mpirun -n 4 henson sample.hwl
 
 Other examples:
 
-  * [examples/intercomm](examples/intercomm) illustrates multiple execution groups.
+  * [examples/intercomm](examples/intercomm) illustrates multiple execution groups;
+  * [examples/async](examples/async) does the same, but with asynchronous data exchange.
 
 ## Problem and Solution
 
@@ -143,11 +144,13 @@ helper functions allow exchanging specific types of data:
   * `henson_{save,load}_array(name, address, type, count, stride)`
   * `henson_{save,load}_pointer(name, ptr)`
   * `henson_{save,load}_size_t(name, size)`
+  * `henson_{save,load}_int(name, x)`
 
 In C++, there are additional functions:
 
   * `henson::save(name, x)`
   * `template<class T> T* henson::load(name)`
+  * `henson::exists(name)`
 
 See [include/henson/data.h](include/henson/data.h) and
 [include/henson/data.hpp](include/henson/data.hpp)

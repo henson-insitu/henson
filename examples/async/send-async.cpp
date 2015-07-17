@@ -32,12 +32,33 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    MPI_Status s;
     if (henson_stop())
     {
+        // unblock the root's data request
+        if (rank == 0)
+            MPI_Recv(0, 0, MPI_INT, rank, tags::request_data, intercomm, &s);
+
         printf("[%d]: send signalling stop\n", rank);
         MPI_Send(0,0,MPI_INT,rank,tags::stop,intercomm);
         return 0;
     }
+
+    // check if receiver is ready
+    bool receiver_ready = false;
+    int flag;
+    if (rank == 0)
+    {
+        MPI_Status s;
+        MPI_Iprobe(rank, tags::request_data, intercomm, &flag, &s);
+        if (flag)
+            MPI_Recv(0, 0, MPI_INT, rank, tags::request_data, intercomm, &s);       // unblock the send
+
+        MPI_Bcast(&flag,1,MPI_INT,0,world);
+    } else
+        MPI_Bcast(&flag,1,MPI_INT,0,world);
+
+    if (!flag) return 0;
 
     float* data;
     size_t count;

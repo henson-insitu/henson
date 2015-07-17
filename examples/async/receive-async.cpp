@@ -38,7 +38,12 @@ int main(int argc, char** argv)
         MPI_Status s;
         int flag;
 
-        MPI_Probe(rank, MPI_ANY_TAG, intercomm, &s);
+        // request more data
+        if (rank == 0)
+            MPI_Send(0, 0, MPI_INT, rank, tags::request_data, intercomm);
+
+        // check if we are told to stop
+        MPI_Probe(rank,  MPI_ANY_TAG, intercomm, &s);
         MPI_Iprobe(rank, tags::stop, intercomm, &flag, &s);
 
         if (flag)

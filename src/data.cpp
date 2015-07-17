@@ -57,6 +57,20 @@ henson_load_size_t(const char* name, size_t* x)
     *x = namemap->get< henson::Value<size_t> >(name)->value;
 }
 
+void
+henson_save_int(const char* name, int  x)
+{
+    if (!namemap) return;
+    namemap->add(name, new henson::Value<int>(x));
+}
+
+void
+henson_load_int(const char* name, int* x)
+{
+    if (!namemap) return;
+    *x = namemap->get< henson::Value<int> >(name)->value;
+}
+
 
 // C++ interface
 void

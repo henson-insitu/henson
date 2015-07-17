@@ -31,3 +31,4 @@ set_target_properties       (henson PROPERTIES COMPILE_FLAGS "-std=c++11")
 
 add_subdirectory            (examples/simple)
 add_subdirectory            (examples/intercomm)
+add_subdirectory            (examples/async)
