@@ -9,11 +9,12 @@
     - [MPI Initialization](#markdown-header-mpi-initialization)
     - [Control Transfer](#markdown-header-control-transfer)
     - [Data Exchange](#markdown-header-data-exchange)
-    - [Execution Groups](#markdown-header-execution-groups)
+    - [Execution Groups][]
   * [HWL][]
   * [Compiling and Linking](#markdown-header-compiling-and-linking)
 
-[HWL]:  #markdown-header-hwl
+[Execution Groups]:   #markdown-header-execution-groups
+[HWL]:                #markdown-header-hwl
 
 ## Example
 
