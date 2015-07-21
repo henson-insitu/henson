@@ -10,12 +10,14 @@
     - [Control Transfer](#markdown-header-control-transfer)
     - [Data Exchange](#markdown-header-data-exchange)
     - [Execution Groups](#markdown-header-execution-groups)
-  * [HWL](#markdown-header-hwl)
+  * [HWL][]
   * [Compiling and Linking](#markdown-header-compiling-and-linking)
+
+[HWL]:  #markdown-header-hwl
 
 ## Example
 
-See [simulation.c][] and [analysis.cpp][] in [examples/simple][examples/simple] for sample code.
+See [simulation.c][] and [analysis.cpp][] in [examples/simple](examples/simple) for sample code.
 
 [simulation.c]:     examples/simple/simulation.c
 [analysis.cpp]:     examples/simple/analysis.cpp
