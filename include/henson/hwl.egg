@@ -22,9 +22,11 @@ struct ControlFlow
 
     void            add_line(std::string l)                     { commands.push_back(l); }
     void            add_lines(std::vector<std::string> lines)   { commands = lines; }
+    void            set_control(std::string c)                  { control = c; }
 
     std::string                 name;
     std::vector<std::string>    commands;
+    std::string                 control;
 };
 
 struct Script
@@ -34,7 +36,6 @@ struct Script
 
     std::vector<PuppetCommand>                  puppets;
     std::map<std::string, ControlFlow>          procs;
-    std::set<std::string>                       control;
 };
 
 }
@@ -43,20 +44,17 @@ struct Script
 
 script   : Script               = (  puppet  : x     { psVal.add_puppet(x); }
                                    | procs   : p     { psVal.add_procs(p); }
-                                   | control : c     { psVal.control.insert(c); }
                                    | _ nl)*
 
 puppet   : PuppetCommand        = name : n _ '=' _ command : c _ nl     { psVal = { n,c }; }
 
 command  : std::string          = <(!(nl | '#') .)*> : psVal
 
-procs    : ControlFlow          = name : n _ ':' _ nl execlines : l     { psVal = n; psVal.add_lines(l); }
+procs    : ControlFlow          = name : n _ "while" _ name : c _ ':' _ nl execlines : l     { psVal = n; psVal.set_control(c); psVal.add_lines(l); }
 
 execline  : std::string              = ('\t' | "    ") name:psVal _ (nl | eof)
 execlines : std::vector<std::string> = (  execline:l { psVal.push_back(l); }
                                         | _ nl )+
-
-control  : std::string          = "control" _ name:psVal _ nl
 
 name     : std::string          = < letter (letter | number)* > : psVal
 

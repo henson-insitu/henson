@@ -3,8 +3,6 @@
 sim = ./simulation 250
 ana = ./analysis
 
-world:
+world while sim:
 	sim
 	ana
-
-control sim     # run while sim is running

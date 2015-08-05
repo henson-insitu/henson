@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
             if (stop_execution) puppet.signal_stop();
             puppet.proceed();
 
-            if (!puppet.running() && script.control.find(name) != script.control.end())
+            if (!puppet.running() && control.control == name)
                 stop_execution = true;
         }
     } while (!stop_execution);

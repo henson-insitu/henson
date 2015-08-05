@@ -5,13 +5,10 @@ snd = ./send
 rcv = ./receive
 ana = ../simple/analysis
 
-producer:
+producer while sim:
 	sim
 	snd
 
-consumer:
+consumer while rcv:
 	rcv
 	ana
-
-control sim         # run producer until sim stops
-control rcv         # run consumer until rcv stops

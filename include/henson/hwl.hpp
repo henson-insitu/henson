@@ -26,9 +26,11 @@ struct ControlFlow
 
     void            add_line(std::string l)                     { commands.push_back(l); }
     void            add_lines(std::vector<std::string> lines)   { commands = lines; }
+    void            set_control(std::string c)                  { control = c; }
 
     std::string                 name;
     std::vector<std::string>    commands;
+    std::string                 control;
 };
 
 struct Script
@@ -38,7 +40,6 @@ struct Script
 
     std::vector<PuppetCommand>                  puppets;
     std::map<std::string, ControlFlow>          procs;
-    std::set<std::string>                       control;
 };
 
 }
@@ -57,7 +58,6 @@ namespace hwl {
 	bool procs(parser::state&, ControlFlow          &);
 	bool execline(parser::state&, std::string              &);
 	bool execlines(parser::state&, std::vector<std::string> &);
-	bool control(parser::state&, std::string          &);
 	bool name(parser::state&, std::string          &);
 	bool letter(parser::state&);
 	bool number(parser::state&);
@@ -68,7 +68,6 @@ namespace hwl {
 	bool eof(parser::state&);
 
 	bool script(parser::state& ps, Script               & psVal) {
-		std::string           c;
 		ControlFlow           p;
 		PuppetCommand         x;
 
@@ -82,10 +81,6 @@ namespace hwl {
 					parser::sequence({
 						parser::bind(p, procs),
 						[&](parser::state& ps) { psVal.add_procs(p);  return true; }}),
-				
-					parser::sequence({
-						parser::bind(c, control),
-						[&](parser::state& ps) { psVal.control.insert(c);  return true; }}),
 				
 					parser::sequence({
 						_,
@@ -119,6 +114,7 @@ namespace hwl {
 	}
 
 	bool procs(parser::state& ps, ControlFlow          & psVal) {
+		std::string           c;
 		std::vector<std::string>  l;
 		std::string           n;
 
@@ -126,11 +122,15 @@ namespace hwl {
 			parser::sequence({
 				parser::bind(n, name),
 				_,
+				parser::literal("while"),
+				_,
+				parser::bind(c, name),
+				_,
 				parser::literal(':'),
 				_,
 				nl,
 				parser::bind(l, execlines),
-				[&](parser::state& ps) { psVal = n; psVal.add_lines(l);  return true; }}))(ps);
+				[&](parser::state& ps) { psVal = n; psVal.set_control(c); psVal.add_lines(l);  return true; }}))(ps);
 	}
 
 	bool execline(parser::state& ps, std::string              & psVal) {
@@ -163,28 +163,18 @@ namespace hwl {
 						nl})})))(ps);
 	}
 
-	bool control(parser::state& ps, std::string          & psVal) {
-		return parser::memoize(8, psVal, 
-			parser::sequence({
-				parser::literal("control"),
-				_,
-				parser::bind(psVal, name),
-				_,
-				nl}))(ps);
-	}
-
 	bool name(parser::state& ps, std::string          & psVal) {
-		return parser::memoize(9, psVal, parser::capture(psVal, 
+		return parser::memoize(8, psVal, parser::capture(psVal, 
 			parser::sequence({
 				letter,
-				parser::memoize_many(10, 
+				parser::memoize_many(9, 
 					parser::choice({
 						letter,
 						number}))})))(ps);
 	}
 
 	bool letter(parser::state& ps) {
-		return parser::memoize(11, 
+		return parser::memoize(10, 
 			parser::choice({
 				parser::between('a', 'z'),
 				parser::between('A', 'Z'),
@@ -192,35 +182,35 @@ namespace hwl {
 	}
 
 	bool number(parser::state& ps) {
-		return parser::memoize(12, parser::between('0', '9'))(ps);
+		return parser::memoize(11, parser::between('0', '9'))(ps);
 	}
 
 	bool comment(parser::state& ps) {
-		return parser::memoize(13, 
+		return parser::memoize(12, 
 			parser::sequence({
 				parser::literal('#'),
-				parser::memoize_many(14, 
+				parser::memoize_many(13, 
 					parser::sequence({
 						parser::look_not(nl),
 						parser::any()}))}))(ps);
 	}
 
 	bool _(parser::state& ps) {
-		return parser::memoize(15, parser::memoize_many(16, 
+		return parser::memoize(14, parser::memoize_many(15, 
 			parser::choice({
 				space,
 				comment})))(ps);
 	}
 
 	bool space(parser::state& ps) {
-		return parser::memoize(17, 
+		return parser::memoize(16, 
 			parser::choice({
 				parser::literal(' '),
 				parser::literal('\t')}))(ps);
 	}
 
 	bool nl(parser::state& ps) {
-		return parser::memoize(18, 
+		return parser::memoize(17, 
 			parser::choice({
 				parser::literal("\n\r"),
 				parser::literal('\n'),
@@ -228,7 +218,7 @@ namespace hwl {
 	}
 
 	bool eof(parser::state& ps) {
-		return parser::memoize(19, parser::look_not(parser::any()))(ps);
+		return parser::memoize(18, parser::look_not(parser::any()))(ps);
 	}
 
 } // namespace hwl

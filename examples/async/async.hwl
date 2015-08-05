@@ -5,13 +5,10 @@ snd = ./send-async
 rcv = ./receive-async
 ana = ../simple/analysis 3      # sleep=3
 
-producer:
+producer while sim:
 	sim
 	snd
 
-consumer:
+consumer while rcv:
 	rcv
 	ana
-
-control sim         # run producer until sim stops
-control rcv         # run consumer until rcv stops

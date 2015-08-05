@@ -24,18 +24,16 @@ See [simulation.c][] and [analysis.cpp][] in [examples/simple](examples/simple) 
 [analysis.cpp]:     examples/simple/analysis.cpp
 
 ```
-sample.hwl:
+simple.hwl:
 sim = ./simulation 1000
 ana = ./analysis
 
-world:
+world while sim:
     sim
     ana
 
-control sim     # run while sim is running
 
-
-mpirun -n 4 henson sample.hwl
+mpirun -n 4 henson simple.hwl
 ```
 
 Other examples:
@@ -134,7 +132,7 @@ if (!henson_active())
 A coroutine can transfer control back to `henson` by calling `henson_yield()`.
 `henson` in turn decides where to continue execution next. `henson` cycles
 through all coroutines in an [execution group][Execution Groups] in order until
-any coroutine designated as a `control` terminates. Once this happens, every
+the controlling coroutine specified in the `while`-clause terminates. Once this happens, every
 remaining coroutine in the group loop gets called once. A coroutine may check
 if its execution group is about to stop (i.e., if a controlling coroutine has
 indicated that it's done) by calling `henson_stop()`.
@@ -238,7 +236,7 @@ supplied to `henson`.
 The following annotated example
 (original in [intercomm.hwl](examples/intercomm/intercomm.hwl))
 illustrates the syntax of the scripts supplied to henson.
-(A simpler example is [sample.hwl](examples/simple/sample.hwl).)
+(A simpler example is [simple.hwl](examples/simple/simple.hwl).)
 
 First, the script specifies the command lines to run and assigns them names.
 (These commands become the coroutines.)
@@ -253,25 +251,21 @@ Next, the script specifies two execution groups, `producer` and `consumer`. The
 former cycles through coroutines `sim` and `snd`; the latter cycles through
 `rcv` and `ana`.
 ```
-producer:
+producer while sim:
 	sim
 	snd
 
-consumer:
+consumer while rcv:
 	rcv
 	ana
 ```
 
-Finally, the script specifies that `sim` and `rcv` control execution. I.e.,
+The script specifies, via the `while`-clause, that `sim` and `rcv` control execution. I.e.,
 `producer` group will stop when `sim` stops. `consumer` group stops when `rcv`
 does. Notice that for `rcv` to find out that no more data will arrive, `snd`
 needs to send it the appropriate message. Accordingly, [send.cpp][] checks whether
 `producer` group is stopping by calling `henson_stop()`, and sends the stop
 message when this happens.
-```
-control sim         # run producer until sim stops
-control rcv         # run consumer until rcv stops
-```
 
 
 ## Compiling and Linking
