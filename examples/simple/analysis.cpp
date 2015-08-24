@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstdlib>
 #include <cassert>
 #include <unistd.h>
 #include <mpi.h>
