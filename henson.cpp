@@ -61,15 +61,20 @@ int main(int argc, char *argv[])
 
     fmt::print("[{}]: henson started; total processes = {}\n", rank, size);
 
+    std::vector<std::string>    procs_sizes;
     using namespace opts;
     Options ops(argc, argv);
+    ops
+        >> Option('p', "procs", procs_sizes, "number of processors to use for a control group")
+    ;
+
     bool show_sizes = ops >> Present('s', "show-sizes", "show group sizes");
 
     std::string script_fn;
     if (  ops >> Present('h', "help", "show help") ||
         !(ops >> PosOption(script_fn)))
     {
-        fmt::print("Usage: {} SCRIPT [procs=SIZE]+\n\n", argv[0]);
+        fmt::print("Usage: {} SCRIPT [-p procs=SIZE]* [variable=value]*\n\n", argv[0]);
         fmt::print("Execute SCRIPT. procs are the names of execution groups in the script.\n");
         fmt::print("Leftover processors get split evenly among the execution groups in the SCRIPT\n");
         fmt::print("but not specified in the procs list.\n\n");
@@ -90,9 +95,8 @@ int main(int argc, char *argv[])
 
     // parse the procs
     henson::ProcMap::Vector         procs;
-    std::string                     procs_size;
     int                             total_procs = 0;
-    while(ops >> PosOption(procs_size))
+    for (std::string procs_size : procs_sizes)
     {
         int eq_pos = procs_size.find('=');
         if (eq_pos == std::string::npos)
