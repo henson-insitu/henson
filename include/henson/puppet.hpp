@@ -31,9 +31,7 @@ struct Puppet
 
                         Puppet(const std::string& fn, int argc, char** argv, ProcMap* procmap, NameMap* namemap):
                             filename_(fn),
-                            argc_(argc), argv_(argv),
-                            //stack_(bc::stack_traits::default_size())      // requires Boost 1.58
-                            stack_(1024*1024)
+                            argc_(argc), argv_(argv)
                         {
                             void* lib = dlopen(fn.c_str(), RTLD_LAZY);
 
@@ -54,8 +52,11 @@ struct Puppet
                                 fmt::print(std::cerr, "Reasonable only if {} doesn't need to exchange any data\n", filename_);
                             }
 
-                            to_ = bc::make_fcontext(&stack_[0] + stack_.size(), stack_.size(), exec);
+                            stack_ = allocator_.allocate();
+                            to_ = bc::make_fcontext(stack_.sp, stack_.size, exec);
                         }
+
+                        ~Puppet()               { allocator_.deallocate(stack_); }
 
     // can't even move a puppet since the addresses of its from_ and to_ fields
     // are stored in the modules (saved via henson_set_context, in the constructor above)
@@ -86,7 +87,9 @@ struct Puppet
     std::string         filename_;
     int                 argc_;
     char**              argv_;
-    std::vector<char>   stack_;
+    bc::stack_context   stack_;
+    bc::fixedsize_stack allocator_;
+    //bc::protected_fixedsize_stack allocator_;
 
     MainType            main_;
     bc::fcontext_t      from_, to_;

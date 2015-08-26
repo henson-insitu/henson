@@ -272,7 +272,7 @@ message when this happens.
 
 ## Compiling and Linking
 
-Henson depends on [Boost](http://www.boost.org) `>=1.57`, specifically, the
+Henson depends on [Boost](http://www.boost.org) `>=1.58`, specifically, the
 Boost.Context library, responsible for switching contexts between the
 coroutines.
 
