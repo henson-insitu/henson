@@ -90,7 +90,7 @@ cmd_str  : std::string          = <(!(nl | '#') .)*> : psVal
 
 procs    : ControlFlow          = name : n _ "while" _ name : c _ ':' _ nl execlines : l     { psVal = n; psVal.set_control(c); psVal.add_lines(l); }
 
-execline  : std::string              = ('\t' | "    ") name:psVal _ (nl | eof)
+execline  : std::string              = ('\t' | "    ") <'*'? name>:psVal _ (nl | eof)
 execlines : std::vector<std::string> = (  execline:l { psVal.push_back(l); }
                                         | _ nl )+
 

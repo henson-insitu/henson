@@ -180,7 +180,10 @@ namespace hwl {
 					parser::choice({
 						parser::literal('\t'),
 						parser::literal("    ")}),
-				parser::bind(psVal, name),
+				parser::capture(psVal, 
+					parser::sequence({
+						parser::option(parser::literal('*')),
+						parser::unbind(name)})),
 				_,
 				
 					parser::choice({

@@ -70,6 +70,7 @@ int main(int argc, char *argv[])
     ;
 
     bool show_sizes = ops >> Present('s', "show-sizes", "show group sizes");
+    bool verbose    = ops >> Present('v', "verbose",    "verbose output");
 
     std::string script_fn;
     if (  ops >> Present('h', "help", "show help") ||
@@ -208,16 +209,39 @@ int main(int argc, char *argv[])
     bool stop_execution = false;
     do
     {
+        std::vector<std::string>    revisit;
+
         for (size_t i = 0; i < control.commands.size(); ++i)
         {
-            const std::string&  name   = control.commands[i];
+            std::string name = control.commands[i];
+            if (name[0] == '*')
+            {
+                name = name.substr(1);
+                revisit.push_back(name);
+            }
+
             auto&               puppet = *puppets[name];
 
-            if (stop_execution) puppet.signal_stop();
+            if (stop_execution)
+            {
+                if (verbose) fmt::print("Sending stop to {}\n", name);
+                puppet.signal_stop();
+            }
+            if (verbose) fmt::print("Proceeding with {}\n", name);
             puppet.proceed();
 
             if (!puppet.running() && control.control == name)
+            {
+                if (verbose) fmt::print("Control puppet {} stopped in {}\n", name, control.name);
                 stop_execution = true;
+            }
+        }
+
+        // revisit the puppets that need to finilize their execution
+        for (auto& name : revisit)
+        {
+            if (verbose) fmt::print("Revisiting {}\n", name);
+            puppets[name]->proceed();
         }
     } while (!stop_execution);
 
