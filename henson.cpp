@@ -2,6 +2,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <memory>
 
 #include <mpi.h>
@@ -109,6 +110,22 @@ int main(int argc, char *argv[])
         total_procs += sz;
     }
 
+    // parse variables
+    std::map<std::string,std::string>   variables;
+    std::string                         var;
+    while (ops >> PosOption(var))
+    {
+        int eq_pos = var.find('=');
+        if (eq_pos == std::string::npos)
+        {
+            fmt::print("Can't parse {}\n", var);
+            return 1;
+        }
+        auto var_name  = var.substr(0, eq_pos);
+        auto var_value = var.substr(eq_pos + 1, var.size() - eq_pos);
+        variables[var_name] = var_value;
+    }
+
     if (total_procs > size)
     {
         fmt::print("Specified procs exceed MPI size: {} > {}\n", total_procs, size);
@@ -160,7 +177,21 @@ int main(int argc, char *argv[])
     std::map<std::string, PuppetUniquePtr>          puppets;
     for (auto& p : script.puppets)
     {
-        command_lines.emplace_back(p.command);
+        // parse and process command variables
+        //fmt::print("Parsing command: {}\n", p.command);
+        hwl::Command cmd;
+        std::istringstream command_in(p.command);
+        parser::state ps(command_in);
+        bool result = hwl::command(ps, cmd);
+        if (!result)
+        {
+            fmt::print("Couldn't parse command: {}\n", p.command);
+            return 1;
+        }
+        auto cmd_expanded = cmd.generate(variables);
+        //fmt::print("Command parsed and expanded: {}\n", cmd_expanded);
+
+        command_lines.emplace_back(cmd_expanded);
         auto& cmd_line = command_lines.back();
         puppets[p.name] = PuppetUniquePtr(new h::Puppet(prefix + cmd_line.executable(),
                                                         cmd_line.argv.size(),

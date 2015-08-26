@@ -239,9 +239,11 @@ illustrates the syntax of the scripts supplied to henson.
 (A simpler example is [simple.hwl](examples/simple/simple.hwl).)
 
 First, the script specifies the command lines to run and assigns them names.
-(These commands become the coroutines.)
+These commands become the coroutines. Command lines may contain variables (with
+defaults in parentheses); the variable values can be supplied to `henson` on
+its command line.
 ```
-sim = ../simple/simulation 250
+sim = ../simple/simulation $size(250)
 snd = ./send
 rcv = ./receive
 ana = ../simple/analysis

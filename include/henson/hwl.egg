@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <tuple>
 
 namespace hwl
 {
@@ -14,6 +15,43 @@ struct PuppetCommand
 {
     std::string     name;
     std::string     command;
+};
+
+struct Variable
+{
+    std::string     name;
+    std::string     value;      // default value
+};
+
+struct Command
+{
+    void            add_string(std::string s)   { strings.push_back(s);   indices.emplace_back( strings.size() - 1,   false ); }
+    void            add_variable(Variable v)    { variables.push_back(v); indices.emplace_back( variables.size() - 1, true  ); }
+
+    std::string     generate(const std::map<std::string,std::string>& varmap) const
+    {
+        std::string result;
+        for (auto& x : indices)
+        {
+            if (std::get<1>(x))     // variable
+            {
+                auto var = variables[std::get<0>(x)];
+                auto it  = varmap.find(var.name);
+                if (it == varmap.end())
+                    result += var.value;
+                else
+                    result += it->second;
+            } else                  // string
+            {
+                result += strings[std::get<0>(x)];
+            }
+        }
+        return result;
+    }
+
+    std::vector<std::string>            strings;
+    std::vector<Variable>               variables;
+    std::vector<std::tuple<int,bool>>   indices;
 };
 
 struct ControlFlow
@@ -46,15 +84,22 @@ script   : Script               = (  puppet  : x     { psVal.add_puppet(x); }
                                    | procs   : p     { psVal.add_procs(p); }
                                    | _ nl)*
 
-puppet   : PuppetCommand        = name : n _ '=' _ command : c _ nl     { psVal = { n,c }; }
+puppet   : PuppetCommand        = name : n _ '=' _ cmd_str : c _ nl     { psVal = { n,c }; }
 
-command  : std::string          = <(!(nl | '#') .)*> : psVal
+cmd_str  : std::string          = <(!(nl | '#') .)*> : psVal
 
 procs    : ControlFlow          = name : n _ "while" _ name : c _ ':' _ nl execlines : l     { psVal = n; psVal.set_control(c); psVal.add_lines(l); }
 
 execline  : std::string              = ('\t' | "    ") name:psVal _ (nl | eof)
 execlines : std::vector<std::string> = (  execline:l { psVal.push_back(l); }
                                         | _ nl )+
+
+# parse command string into a list of strings and variables
+command   : Command             = (  <(!'$' . )+>:s         { psVal.add_string(s);   }
+                                   | variable:v             { psVal.add_variable(v); } )+
+# $varname or $varname(default_value)
+variable  : Variable            = '$' name : n ('(' <(!')' .)*>:v ')' { psVal.value = v; } )?   { psVal.name = n; }
+
 
 name     : std::string          = < letter (letter | number)* > : psVal
 
