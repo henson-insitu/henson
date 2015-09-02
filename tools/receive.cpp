@@ -100,6 +100,22 @@ int main(int argc, char** argv)
                     MPI_Recv(&x, 1, MPI_UNSIGNED_LONG, rank, tags::data, remote, &s);
                     henson_save_size_t(var.name.c_str(), x);
                 }
+            } else if (var.type == "float")
+            {
+                for (int rank : ranks)
+                {
+                    float x;
+                    MPI_Recv(&x, 1, MPI_FLOAT, rank, tags::data, remote, &s);
+                    henson_save_float(var.name.c_str(), x);
+                }
+            } else if (var.type == "double")
+            {
+                for (int rank : ranks)
+                {
+                    double x;
+                    MPI_Recv(&x, 1, MPI_DOUBLE, rank, tags::data, remote, &s);
+                    henson_save_double(var.name.c_str(), x);
+                }
             } else if (var.type == "array")
             {
                 for (int rank : ranks)

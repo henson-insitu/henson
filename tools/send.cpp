@@ -100,6 +100,18 @@ int main(int argc, char** argv)
             henson_load_size_t(var.name.c_str(), &x);
             for (int rank : ranks)
                 MPI_Send(&x, 1, MPI_UNSIGNED_LONG, rank, tags::data, remote);
+        } else if (var.type == "float")
+        {
+            float x;
+            henson_load_float(var.name.c_str(), &x);
+            for (int rank : ranks)
+                MPI_Send(&x, 1, MPI_FLOAT, rank, tags::data, remote);
+        } else if (var.type == "double")
+        {
+            double x;
+            henson_load_double(var.name.c_str(), &x);
+            for (int rank : ranks)
+                MPI_Send(&x, 1, MPI_DOUBLE, rank, tags::data, remote);
         } else if (var.type == "array")
         {
             for (int rank : ranks)
