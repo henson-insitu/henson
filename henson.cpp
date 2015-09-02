@@ -30,8 +30,16 @@ struct CommandLine
         {
             pos = line.find(' ', pos + 1);
 
-            arguments.push_back(std::vector<char>(line.begin() + prev + 1, pos == std::string::npos ? line.end() : line.begin() + pos));
-            arguments.back().push_back('\0');
+            std::vector<char> arg(line.begin() + prev + 1, pos == std::string::npos ? line.end() : line.begin() + pos);
+            for (char c : arg)
+            {
+                if (!std::isspace(c))
+                {
+                    arg.push_back('\0');
+                    arguments.push_back(std::move(arg));
+                    break;
+                }
+            }
 
             prev = pos;
         }
@@ -76,11 +84,14 @@ int main(int argc, char *argv[])
     if (  ops >> Present('h', "help", "show help") ||
         !(ops >> PosOption(script_fn)))
     {
-        fmt::print("Usage: {} SCRIPT [-p procs=SIZE]* [variable=value]*\n\n", argv[0]);
-        fmt::print("Execute SCRIPT. procs are the names of execution groups in the script.\n");
-        fmt::print("Leftover processors get split evenly among the execution groups in the SCRIPT\n");
-        fmt::print("but not specified in the procs list.\n\n");
-        fmt::print("{}", ops);
+        if (rank == 0)
+        {
+            fmt::print("Usage: {} SCRIPT [-p group=SIZE]* [variable=value]*\n\n", argv[0]);
+            fmt::print("Execute SCRIPT. procs are the names of execution groups in the script.\n");
+            fmt::print("Leftover processors get split evenly among the execution groups in the SCRIPT\n");
+            fmt::print("but not specified in the procs list.\n\n");
+            fmt::print("{}", ops);
+        }
         return 1;
     }
 

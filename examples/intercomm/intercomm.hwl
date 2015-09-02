@@ -1,8 +1,8 @@
 # Run via mpirun -n 4 .../henson intercomm.hwl
 
 sim = ../simple/simulation $size(250)
-snd = ./send
-rcv = ./receive
+snd = ../../tools/send    consumer t:int data:array
+rcv = ../../tools/receive producer t:int data:array
 ana = ../simple/analysis
 
 producer while sim:

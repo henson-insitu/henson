@@ -221,8 +221,8 @@ such a pattern. Instead of switching directly to [analysis.cpp][],
 [receive.cpp][] on a different set of processes; [receive.cpp][] in turn
 switches to [analysis.cpp][].
 
-[send.cpp]:     examples/intercomm/send.cpp
-[receive.cpp]:  examples/intercomm/receive.cpp
+[send.cpp]:     tools/send.cpp
+[receive.cpp]:  tools/receive.cpp
 
 `henson_get_world()` returns the communicator restricted to each execution
 group. To communicate across groups, [send.cpp][] and [receive.cpp][] use
@@ -244,8 +244,8 @@ defaults in parentheses); the variable values can be supplied to `henson` on
 its command line.
 ```
 sim = ../simple/simulation $size(250)
-snd = ./send
-rcv = ./receive
+snd = ../../tools/send      consumer t:int data:array
+rcv = ../../tools/receive   producer t:int data:array
 ana = ../simple/analysis
 ```
 
