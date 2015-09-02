@@ -71,6 +71,33 @@ henson_load_int(const char* name, int* x)
     *x = namemap->get< henson::Value<int> >(name)->value;
 }
 
+void
+henson_save_float(const char* name, float  x)
+{
+    if (!namemap) return;
+    namemap->add(name, new henson::Value<float>(x));
+}
+
+void
+henson_load_float(const char* name, float* x)
+{
+    if (!namemap) return;
+    *x = namemap->get< henson::Value<float> >(name)->value;
+}
+
+void
+henson_save_double(const char* name, double  x)
+{
+    if (!namemap) return;
+    namemap->add(name, new henson::Value<double>(x));
+}
+
+void
+henson_load_double(const char* name, double* x)
+{
+    if (!namemap) return;
+    *x = namemap->get< henson::Value<double> >(name)->value;
+}
 
 // C++ interface
 void

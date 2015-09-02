@@ -21,6 +21,12 @@ void        henson_load_size_t(const char* name, size_t* x);
 void        henson_save_int(const char* name, int  x);
 void        henson_load_int(const char* name, int* x);
 
+void        henson_save_float(const char* name, float  x);
+void        henson_load_float(const char* name, float* x);
+
+void        henson_save_double(const char* name, double  x);
+void        henson_load_double(const char* name, double* x);
+
 #ifdef __cplusplus
 }
 #endif
