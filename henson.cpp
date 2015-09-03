@@ -205,7 +205,10 @@ int main(int argc, char *argv[])
 
         command_lines.emplace_back(cmd_expanded);
         auto& cmd_line = command_lines.back();
-        puppets[p.name] = PuppetUniquePtr(new h::Puppet(prefix + cmd_line.executable(),
+        auto exec = cmd_line.executable();
+        if (exec[0] != '/' && exec[0] != '~')
+            exec = prefix + exec;
+        puppets[p.name] = PuppetUniquePtr(new h::Puppet(exec,
                                                         cmd_line.argv.size(),
                                                         &cmd_line.argv[0],
                                                         procmap.get(),
