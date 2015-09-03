@@ -78,58 +78,51 @@ int main(int argc, char** argv)
             return 0;
         }
 
-        std::vector<std::unique_ptr<std::vector<char>>>     buffers;
-
-        for (const Variable& var : variables)
+        std::vector<std::vector<char>>     buffers(ranks.size());
+        for (size_t i = 0; i < ranks.size(); ++i)
         {
-            fmt::print("Receiving {}\n", var.name);
+            int   rank   = ranks[i];
+            auto& buffer = buffers[i];
 
-            if (var.type == "int")
+            int c;
+            MPI_Probe(rank, tags::data, remote, &s);
+            MPI_Get_count(&s, MPI_BYTE, &c);
+            buffer.resize(c);
+            MPI_Recv(&buffer[0], buffer.size(), MPI_BYTE, rank, tags::data, remote, &s);
+        }
+
+        for (size_t i = 0; i < ranks.size(); ++i)
+        {
+            int     rank     = ranks[i];
+            auto&   buffer   = buffers[i];
+            size_t  position = 0;
+
+            for (const Variable& var : variables)
             {
-                for (int rank : ranks)
+                if (var.type == "int")
                 {
                     int x;
-                    MPI_Recv(&x, 1, MPI_INT, rank, tags::data, remote, &s);
+                    read(buffer, position, x);
                     henson_save_int(var.name.c_str(), x);
-                }
-            } else if (var.type == "size_t")
-            {
-                for (int rank : ranks)
+                } else if (var.type == "size_t")
                 {
                     size_t x;
-                    MPI_Recv(&x, 1, MPI_UNSIGNED_LONG, rank, tags::data, remote, &s);
+                    read(buffer, position, x);
                     henson_save_size_t(var.name.c_str(), x);
-                }
-            } else if (var.type == "float")
-            {
-                for (int rank : ranks)
+                } else if (var.type == "float")
                 {
                     float x;
-                    MPI_Recv(&x, 1, MPI_FLOAT, rank, tags::data, remote, &s);
+                    read(buffer, position, x);
                     henson_save_float(var.name.c_str(), x);
-                }
-            } else if (var.type == "double")
-            {
-                for (int rank : ranks)
+                } else if (var.type == "double")
                 {
                     double x;
-                    MPI_Recv(&x, 1, MPI_DOUBLE, rank, tags::data, remote, &s);
+                    read(buffer, position, x);
                     henson_save_double(var.name.c_str(), x);
-                }
-            } else if (var.type == "array")
-            {
-                for (int rank : ranks)
+                } else if (var.type == "array")
                 {
-                    std::vector<char>   buffer;
-
                     // FIXME: need to combine arrays from different ranks together
-                    int c;
-                    MPI_Probe(rank, tags::data, remote, &s);
-                    MPI_Get_count(&s, MPI_BYTE, &c);
-                    buffer.resize(c);
-                    MPI_Recv(&buffer[0], buffer.size(), MPI_BYTE, rank, tags::data, remote, &s);
 
-                    size_t position = 0;
                     for (auto name : split(var.name, ','))
                     {
                         size_t count; size_t type;
@@ -141,12 +134,9 @@ int main(int argc, char** argv)
 
                         position += count*type;
                     }
-
-                    buffers.emplace_back(new std::vector<char>);
-                    buffers.back()->swap(buffer);
-                }
-            } else
-                fmt::print("Warning: unknown type {} for {}\n", var.type, var.name);
+                } else
+                    fmt::print("Warning: unknown type {} for {}\n", var.type, var.name);
+            }
         }
 
         henson_yield();

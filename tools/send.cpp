@@ -86,6 +86,8 @@ int main(int argc, char** argv)
     if (async && !receiver_ready(rank,local,remote))
         return 0;
 
+    std::vector<char>   buffer;
+    size_t              position = 0;
     for (const Variable& var : variables)
     {
         if (var.type == "int")
@@ -93,33 +95,31 @@ int main(int argc, char** argv)
             int x;
             henson_load_int(var.name.c_str(), &x);
             for (int rank : ranks)
-                MPI_Send(&x, 1, MPI_INT, rank, tags::data, remote);
+                write(buffer, position, x);
         } else if (var.type == "size_t")
         {
             size_t x;
             henson_load_size_t(var.name.c_str(), &x);
             for (int rank : ranks)
-                MPI_Send(&x, 1, MPI_UNSIGNED_LONG, rank, tags::data, remote);
+                write(buffer, position, x);
         } else if (var.type == "float")
         {
             float x;
             henson_load_float(var.name.c_str(), &x);
             for (int rank : ranks)
-                MPI_Send(&x, 1, MPI_FLOAT, rank, tags::data, remote);
+                write(buffer, position, x);
         } else if (var.type == "double")
         {
             double x;
             henson_load_double(var.name.c_str(), &x);
             for (int rank : ranks)
-                MPI_Send(&x, 1, MPI_DOUBLE, rank, tags::data, remote);
+                write(buffer, position, x);
         } else if (var.type == "array")
         {
             for (int rank : ranks)
             {
                 // pack array into a buffer (pack parallel arrays together)
                 // TODO: eventually optimize the path of a single contiguous array
-                std::vector<char>   buffer;
-                size_t              position = 0;
                 for (auto name : split(var.name, ','))
                 {
                     void* data_;
@@ -134,10 +134,9 @@ int main(int argc, char** argv)
                     for (size_t i = 0; i < count; ++i)
                         write(buffer, position, *((char*) data + i*stride), type);
                 }
-
-                MPI_Send(&buffer[0], buffer.size(), MPI_BYTE, rank, tags::data, remote);
             }
         } else
             fmt::print("Warning: unknown type {} for {}\n", var.type, var.name);
     }
+    MPI_Send(&buffer[0], buffer.size(), MPI_BYTE, rank, tags::data, remote);
 }
