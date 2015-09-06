@@ -10,6 +10,15 @@
 
 #include "common.hpp"
 
+#define WRITE_TYPE(VARTYPE) \
+    if (var.type == #VARTYPE)  \
+    {   \
+        VARTYPE x;  \
+        henson_load_##VARTYPE(var.name.c_str(), &x);    \
+        for (int rank : ranks)  \
+            write(buffer, position, x); \
+    }
+
 bool receiver_ready(int rank, MPI_Comm local, MPI_Comm remote)
 {
     int flag;
@@ -90,31 +99,11 @@ int main(int argc, char** argv)
     size_t              position = 0;
     for (const Variable& var : variables)
     {
-        if (var.type == "int")
-        {
-            int x;
-            henson_load_int(var.name.c_str(), &x);
-            for (int rank : ranks)
-                write(buffer, position, x);
-        } else if (var.type == "size_t")
-        {
-            size_t x;
-            henson_load_size_t(var.name.c_str(), &x);
-            for (int rank : ranks)
-                write(buffer, position, x);
-        } else if (var.type == "float")
-        {
-            float x;
-            henson_load_float(var.name.c_str(), &x);
-            for (int rank : ranks)
-                write(buffer, position, x);
-        } else if (var.type == "double")
-        {
-            double x;
-            henson_load_double(var.name.c_str(), &x);
-            for (int rank : ranks)
-                write(buffer, position, x);
-        } else if (var.type == "array")
+        WRITE_TYPE(int)     else
+        WRITE_TYPE(size_t)  else
+        WRITE_TYPE(float)   else
+        WRITE_TYPE(double)  else
+        if (var.type == "array")
         {
             for (int rank : ranks)
             {

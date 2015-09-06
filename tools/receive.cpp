@@ -11,6 +11,14 @@
 
 #include "common.hpp"
 
+#define READ_TYPE(VARTYPE) \
+    if (var.type == #VARTYPE)  \
+    {   \
+        VARTYPE x;  \
+        read(buffer, position, x);  \
+        henson_save_##VARTYPE(var.name.c_str(), x);   \
+    }
+
 int main(int argc, char** argv)
 {
     using namespace opts;
@@ -99,27 +107,11 @@ int main(int argc, char** argv)
 
             for (const Variable& var : variables)
             {
-                if (var.type == "int")
-                {
-                    int x;
-                    read(buffer, position, x);
-                    henson_save_int(var.name.c_str(), x);
-                } else if (var.type == "size_t")
-                {
-                    size_t x;
-                    read(buffer, position, x);
-                    henson_save_size_t(var.name.c_str(), x);
-                } else if (var.type == "float")
-                {
-                    float x;
-                    read(buffer, position, x);
-                    henson_save_float(var.name.c_str(), x);
-                } else if (var.type == "double")
-                {
-                    double x;
-                    read(buffer, position, x);
-                    henson_save_double(var.name.c_str(), x);
-                } else if (var.type == "array")
+                READ_TYPE(int)      else
+                READ_TYPE(size_t)   else
+                READ_TYPE(float)    else
+                READ_TYPE(double)   else
+                if (var.type == "array")
                 {
                     // FIXME: need to combine arrays from different ranks together
 
