@@ -55,7 +55,7 @@ int main(int argc, char** argv)
     {
         size_t count;
         MPI_Status s;
-        bool stop;
+        bool stop = false;
 
         // request more data
         if (async && rank == 0)
