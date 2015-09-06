@@ -57,13 +57,37 @@ int main(int argc, char** argv)
 
     // Figure out partner ranks
     std::vector<int>    ranks;
-    ranks.push_back(rank);          // FIXME
+    if (size >= remote_size)
+    {
+        if (size % remote_size != 0)
+        {
+            if (rank == 0)
+                fmt::print("[receive]: group size must be divisible by remote size (or vice versa), got {} vs {}\n", size, remote_size);
+            return 1;
+        }
+        ranks.push_back(rank / (size / remote_size));
+    } else if (size < remote_size)
+    {
+        if (remote_size % size != 0)
+        {
+            if (rank == 0)
+                fmt::print("[receive]: remote size must be divisible by the group size (or vice versa), got {} vs {}\n", size, remote_size);
+            return 1;
+        }
+        int fraction = remote_size / size;
+        for (int i = 0; i < fraction; ++i)
+            ranks.push_back(rank*fraction + i);
+    }
+
+    size_t array_count = 0;
+    for (const Variable& var : variables)
+        if (var.type == "array")
+            array_count += split(var.name, ',').size();
 
     while(true)
     {
         size_t count;
         MPI_Status s;
-        bool stop = false;
 
         // request more data
         if (async && rank == 0)
@@ -72,19 +96,24 @@ int main(int argc, char** argv)
         // check if we are told to stop
         // TODO: this loop forces us to wait until there is a message waiting from every rank
         //       we communicate with; in general, this is not great
-        for (int rank : ranks)
+        int stop;
+        if (rank == 0)
         {
-            int flag;
             MPI_Probe(rank,  MPI_ANY_TAG, remote, &s);
-            MPI_Iprobe(rank, tags::stop,  remote, &flag, &s);
-            stop |= flag;
-        }
+            MPI_Iprobe(rank, tags::stop,  remote, &stop, &s);
+
+            if (stop)
+            {
+                fmt::print("[{}]: stop signal in receive\n", rank);
+                MPI_Recv(0, 0, MPI_INT, rank, tags::stop, remote, &s);       // unblock the send
+            }
+
+            MPI_Bcast(&stop,1,MPI_INT,0,local);
+        } else
+            MPI_Bcast(&stop,1,MPI_INT,0,local);
 
         if (stop)
-        {
-            fmt::print("[{}]: stop signal in receive\n", rank);
             return 0;
-        }
 
         std::vector<std::vector<char>>     buffers(ranks.size());
         for (size_t i = 0; i < ranks.size(); ++i)
@@ -99,11 +128,14 @@ int main(int argc, char** argv)
             MPI_Recv(&buffer[0], buffer.size(), MPI_BYTE, rank, tags::data, remote, &s);
         }
 
+        std::vector<std::vector<char>>              arrays(array_count);
+        std::vector<std::tuple<size_t, size_t>>     arrays_meta(array_count, std::make_tuple<size_t,size_t>(0,0));        // (count, type)
         for (size_t i = 0; i < ranks.size(); ++i)
         {
-            int     rank     = ranks[i];
-            auto&   buffer   = buffers[i];
-            size_t  position = 0;
+            int     rank      = ranks[i];
+            auto&   buffer    = buffers[i];
+            size_t  position  = 0;
+            size_t  array_idx = 0;
 
             for (const Variable& var : variables)
             {
@@ -113,8 +145,6 @@ int main(int argc, char** argv)
                 READ_TYPE(double)   else
                 if (var.type == "array")
                 {
-                    // FIXME: need to combine arrays from different ranks together
-
                     for (auto name : split(var.name, ','))
                     {
                         size_t count; size_t type;
@@ -122,13 +152,44 @@ int main(int argc, char** argv)
                         read(buffer, position, type);
                         void*  data = &buffer[position];
 
-                        henson_save_array(name.c_str(), data, type, count, type);
+                        if (ranks.size() == 1)
+                            henson_save_array(name.c_str(), data, type, count, type);       // save directly
+                        else
+                        {
+                            // copy the data
+                            auto&  array = arrays[array_idx];
+                            size_t sz    = array.size();
+                            array.resize(sz + count*type);
+                            std::copy((char*) data, (char*) data + count*type, &array[sz]);
+
+                            std::get<0>(arrays_meta[array_idx]) += count;
+                            std::get<1>(arrays_meta[array_idx])  = type;
+                        }
 
                         position += count*type;
+                        ++array_idx;
                     }
                 } else
                     fmt::print("Warning: unknown type {} for {}\n", var.type, var.name);
             }
+
+            if (ranks.size() != 1)
+                std::vector<char>().swap(buffers[i]);       // wipe out the buffer that we no longer need
+        }
+
+        if (ranks.size() != 1)
+        {
+            // save the arrays
+            size_t array_idx = 0;
+            for (const Variable& var : variables)
+                if (var.type == "array")
+                    for (auto name : split(var.name, ','))
+                    {
+                        size_t count; size_t type;
+                        std::tie(count,type) = arrays_meta[array_idx];
+                        henson_save_array(name.c_str(), &arrays[array_idx][0], type, count, type);
+                        ++array_idx;
+                    }
         }
 
         henson_yield();

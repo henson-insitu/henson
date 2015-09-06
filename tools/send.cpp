@@ -15,8 +15,7 @@
     {   \
         VARTYPE x;  \
         henson_load_##VARTYPE(var.name.c_str(), &x);    \
-        for (int rank : ranks)  \
-            write(buffer, position, x); \
+        write(buffer, position, x); \
     }
 
 bool receiver_ready(int rank, MPI_Comm local, MPI_Comm remote)
@@ -74,7 +73,30 @@ int main(int argc, char** argv)
 
     // Figure out partner ranks
     std::vector<int>    ranks;
-    ranks.push_back(rank);          // FIXME
+    int                 fraction = 1;       // fraction of an array to send to a remote rank
+    if (size >= remote_size)
+    {
+        if (size % remote_size != 0)
+        {
+            if (rank == 0)
+                fmt::print("[send]: group size must be divisible by remote size (or vice versa), got {} vs {}\n", size, remote_size);
+            return 1;
+        }
+
+        ranks.push_back(rank / (size / remote_size));
+        fraction = 1;
+    } else if (size < remote_size)
+    {
+        if (remote_size % size != 0)
+        {
+            if (rank == 0)
+                fmt::print("[send]: remote size must be divisible by the group size (or vice versa), got {} vs {}\n", size, remote_size);
+            return 1;
+        }
+        fraction = remote_size / size;
+        for (int i = 0; i < fraction; ++i)
+            ranks.push_back(rank*fraction + i);
+    }
 
     MPI_Status s;
     if (henson_stop())
@@ -83,11 +105,12 @@ int main(int argc, char** argv)
         if (async && rank == 0)
             MPI_Recv(0, 0, MPI_INT, rank, tags::request_data, remote, &s);
 
-        for (int rank : ranks)
+        if (rank == 0)
         {
             fmt::print("[{}]: send signalling stop\n", rank);
             MPI_Send(0,0,MPI_INT,rank,tags::stop,remote);
         }
+
         return 0;
     }
 
@@ -95,17 +118,18 @@ int main(int argc, char** argv)
     if (async && !receiver_ready(rank,local,remote))
         return 0;
 
-    std::vector<char>   buffer;
-    size_t              position = 0;
-    for (const Variable& var : variables)
+    for (size_t r = 0; r < ranks.size(); ++r)
     {
-        WRITE_TYPE(int)     else
-        WRITE_TYPE(size_t)  else
-        WRITE_TYPE(float)   else
-        WRITE_TYPE(double)  else
-        if (var.type == "array")
+        int                 rank = ranks[r];
+        std::vector<char>   buffer;
+        size_t              position = 0;
+        for (const Variable& var : variables)
         {
-            for (int rank : ranks)
+            WRITE_TYPE(int)     else
+            WRITE_TYPE(size_t)  else
+            WRITE_TYPE(float)   else
+            WRITE_TYPE(double)  else
+            if (var.type == "array")
             {
                 // pack array into a buffer (pack parallel arrays together)
                 // TODO: eventually optimize the path of a single contiguous array
@@ -118,14 +142,16 @@ int main(int argc, char** argv)
                     henson_load_array(name.c_str(), &data_, &type, &count, &stride);
                     char* data = (char*) data_;
 
-                    write(buffer, position, count);
+                    size_t from = r * (count / fraction);
+                    size_t to   = (r + 1 == ranks.size() ? count : (r+1) * (count / fraction));
+                    write(buffer, position, (to - from));
                     write(buffer, position, type);
-                    for (size_t i = 0; i < count; ++i)
+                    for (size_t i = from; i < to; ++i)
                         write(buffer, position, *((char*) data + i*stride), type);
                 }
-            }
-        } else
-            fmt::print("Warning: unknown type {} for {}\n", var.type, var.name);
+            } else
+                fmt::print("Warning: unknown type {} for {}\n", var.type, var.name);
+        }
+        MPI_Send(&buffer[0], buffer.size(), MPI_BYTE, rank, tags::data, remote);
     }
-    MPI_Send(&buffer[0], buffer.size(), MPI_BYTE, rank, tags::data, remote);
 }
