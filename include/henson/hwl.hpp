@@ -11,6 +11,7 @@
 #include <map>
 #include <set>
 #include <tuple>
+#include <sstream>
 
 namespace hwl
 {
@@ -80,6 +81,43 @@ struct Script
     std::map<std::string, ControlFlow>          procs;
 };
 
+std::string     indent_to_tokens(std::string txt)
+{
+    std::istringstream  in(txt);
+    std::string         line;
+    size_t  cur = 0;
+    int     count = 0;
+    std::string         out;
+    while (std::getline(in, line))
+    {
+        size_t indent = 0;
+        for (; indent < line.size(); ++indent)
+            if (!std::isspace(line[indent]))
+                break;
+
+        if (indent == line.size())      // skip empty lines
+            continue;
+
+        if (indent > cur)
+        {
+            out += "INDENT\n";
+            cur = indent;
+            count++;
+        } else if (indent < cur)
+        {
+            out += "DEDENT\n";
+            cur = indent;
+            count--;
+        }
+        out += line + '\n';
+    }
+
+    for (size_t i = 0; i < count; ++i)
+        out += "DEDENT\n";
+
+    return out;
+}
+
 }
 
 
@@ -106,6 +144,8 @@ namespace hwl {
 	bool space(parser::state&);
 	bool nl(parser::state&);
 	bool eof(parser::state&);
+	bool indent(parser::state&);
+	bool dedent(parser::state&);
 
 	bool script(parser::state& ps, Script               & psVal) {
 		ControlFlow           p;
@@ -169,17 +209,22 @@ namespace hwl {
 				parser::literal(':'),
 				_,
 				nl,
+				indent,
+				nl,
 				parser::bind(l, execlines),
+				dedent,
+				nl,
 				[&](parser::state& ps) { psVal = n; psVal.set_control(c); psVal.add_lines(l);  return true; }}))(ps);
 	}
 
 	bool execline(parser::state& ps, std::string              & psVal) {
 		return parser::memoize(6, psVal, 
 			parser::sequence({
-				
+				parser::look_not(
 					parser::choice({
-						parser::literal('\t'),
-						parser::literal("    ")}),
+						indent,
+						dedent})),
+				_,
 				parser::capture(psVal, 
 					parser::sequence({
 						parser::option(parser::literal('*')),
@@ -301,6 +346,14 @@ namespace hwl {
 
 	bool eof(parser::state& ps) {
 		return parser::memoize(22, parser::look_not(parser::any()))(ps);
+	}
+
+	bool indent(parser::state& ps) {
+		return parser::memoize(23, parser::literal("INDENT"))(ps);
+	}
+
+	bool dedent(parser::state& ps) {
+		return parser::memoize(24, parser::literal("DEDENT"))(ps);
 	}
 
 } // namespace hwl

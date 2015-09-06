@@ -98,7 +98,11 @@ int main(int argc, char *argv[])
     // parse the script
     hwl::Script script;
     std::ifstream script_ifs(script_fn.c_str());
-    parser::state ps(script_ifs);
+    std::string   content((std::istreambuf_iterator<char>(script_ifs)),
+                          (std::istreambuf_iterator<char>()));
+    content = hwl::indent_to_tokens(content);
+    std::istringstream  content_iss(content);
+    parser::state ps(content_iss);
     bool result = hwl::script(ps, script);
     if (!result)
     {

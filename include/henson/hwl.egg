@@ -7,6 +7,7 @@
 #include <map>
 #include <set>
 #include <tuple>
+#include <sstream>
 
 namespace hwl
 {
@@ -76,6 +77,43 @@ struct Script
     std::map<std::string, ControlFlow>          procs;
 };
 
+std::string     indent_to_tokens(std::string txt)
+{
+    std::istringstream  in(txt);
+    std::string         line;
+    size_t  cur = 0;
+    int     count = 0;
+    std::string         out;
+    while (std::getline(in, line))
+    {
+        size_t indent = 0;
+        for (; indent < line.size(); ++indent)
+            if (!std::isspace(line[indent]))
+                break;
+
+        if (indent == line.size())      // skip empty lines
+            continue;
+
+        if (indent > cur)
+        {
+            out += "INDENT\n";
+            cur = indent;
+            count++;
+        } else if (indent < cur)
+        {
+            out += "DEDENT\n";
+            cur = indent;
+            count--;
+        }
+        out += line + '\n';
+    }
+
+    for (size_t i = 0; i < count; ++i)
+        out += "DEDENT\n";
+
+    return out;
+}
+
 }
 
 %}
@@ -88,9 +126,9 @@ puppet   : PuppetCommand        = name : n _ '=' _ cmd_str : c _ nl     { psVal 
 
 cmd_str  : std::string          = <(!(nl | '#') .)*> : psVal
 
-procs    : ControlFlow          = name : n _ "while" _ name : c _ ':' _ nl execlines : l     { psVal = n; psVal.set_control(c); psVal.add_lines(l); }
+procs    : ControlFlow          = name : n _ "while" _ name : c _ ':' _ nl indent nl execlines : l dedent nl   { psVal = n; psVal.set_control(c); psVal.add_lines(l); }
 
-execline  : std::string              = ('\t' | "    ") <'*'? name>:psVal _ (nl | eof)
+execline  : std::string              = !(indent | dedent) _ <'*'? name>:psVal _ (nl | eof)
 execlines : std::vector<std::string> = (  execline:l { psVal.push_back(l); }
                                         | _ nl )+
 
@@ -111,3 +149,6 @@ _       = (space | comment)*
 space   = ' ' | '\t'
 nl      = "\n\r" | '\n' | '\r'
 eof     = !.
+
+indent  = "INDENT"
+dedent  = "DEDENT"
