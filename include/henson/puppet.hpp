@@ -72,8 +72,9 @@ struct Puppet
     void                signal_stop()           { stop_ = 1; }
 
     bool                running() const         { return running_; }
+    int                 result() const          { return result_; }
 
-    static void         exec(intptr_t self_)    { while(true) { Puppet* self = (Puppet*) self_; self->running_ = true; self->main_(self->argc_,self->argv_); self->running_ = false; self->yield(); } }
+    static void         exec(intptr_t self_)    { while(true) { Puppet* self = (Puppet*) self_; self->running_ = true; self->result_ = self->main_(self->argc_,self->argv_); self->running_ = false; self->yield(); } }
 
     template<class T>
     T                   get_function(void* lib, const char* name)
@@ -95,6 +96,7 @@ struct Puppet
     bc::fcontext_t      from_, to_;
     bool                running_;
     int                 stop_ = 0;
+    int                 result_ = -1;
 };
 
 

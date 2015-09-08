@@ -55,16 +55,26 @@ struct Command
     std::vector<std::tuple<int,bool>>   indices;
 };
 
+struct Statement
+{
+                    Statement()                                 = default;      // needed for egg
+                    Statement(std::string c): call(c)           {}
+                    Statement(std::string c, std::vector<Statement> b):
+                        call(c), body(b)                        {}
+
+    std::string             call;
+    std::vector<Statement>  body;
+};
+
 struct ControlFlow
 {
-    ControlFlow&    operator=(std::string name_)        { name = name_; return *this; }
+    ControlFlow&    operator=(std::string name_)                { name = name_; return *this; }
 
-    void            add_line(std::string l)                     { commands.push_back(l); }
-    void            add_lines(std::vector<std::string> lines)   { commands = lines; }
+    void            set_body(std::vector<Statement> body)       { commands = body; }
     void            set_control(std::string c)                  { control = c; }
 
     std::string                 name;
-    std::vector<std::string>    commands;
+    std::vector<Statement>      commands;
     std::string                 control;
 };
 
@@ -126,11 +136,22 @@ puppet   : PuppetCommand        = name : n _ '=' _ cmd_str : c _ nl     { psVal 
 
 cmd_str  : std::string          = <(!(nl | '#') .)*> : psVal
 
-procs    : ControlFlow          = name : n _ "while" _ name : c _ ':' _ nl indent nl execlines : l dedent nl   { psVal = n; psVal.set_control(c); psVal.add_lines(l); }
+procs    : ControlFlow          = name : n _ "while" _ name : c _ ':' _ nl
+                                  indent nl
+                                    statements : body
+                                  dedent nl                             { psVal = n; psVal.set_control(c); psVal.set_body(body); }
 
-execline  : std::string              = !(indent | dedent) _ <'*'? name>:psVal _ (nl | eof)
-execlines : std::vector<std::string> = (  execline:l { psVal.push_back(l); }
+
+statements : std::vector<Statement>   = (  statement:s { psVal.push_back(s); }
                                         | _ nl )+
+statement  : Statement                = !(indent | dedent) _ (call:psVal | if_stmt:psVal)
+
+call      : Statement                =  <'*'? name>:n _ (nl | eof)      { psVal = Statement(n); }
+if_stmt   : Statement                = "if" _ name : c _ ':' _ nl
+                                        indent nl
+                                            statements : body
+                                        dedent nl                       { psVal = Statement(c, body); }
+
 
 # parse command string into a list of strings and variables
 command   : Command             = (  <(!'$' . )+>:s         { psVal.add_string(s);   }

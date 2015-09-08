@@ -57,6 +57,65 @@ struct CommandLine
     std::vector<char*>              argv;
 };
 
+typedef     std::unique_ptr<h::Puppet>                  PuppetUniquePtr;
+typedef     std::map<std::string, PuppetUniquePtr>      Puppets;
+
+struct Executor
+{
+            Executor(bool&                      stop_,
+                     std::vector<std::string>&  revisit_,
+                     Puppets&                   puppets_,
+                     const hwl::ControlFlow&    control_,
+                     bool                       verbose_):
+                stop(stop_), revisit(revisit_), puppets(puppets_), control(control_), verbose(verbose_)       {}
+
+    void    statement(hwl::Statement s)
+    {
+        std::string name = s.call;
+        if (name[0] == '*')
+        {
+            name = name.substr(1);
+            revisit.push_back(name);
+        }
+
+        auto& puppet = *puppets[name];
+
+        exec(name, puppet);
+
+        // if the statment has body, check puppet's return result, and execute, if necessary
+        if (!s.body.empty())
+        {
+            // check result and, if necessary, execute the body
+            if (puppet.result() == 0)       // NB: 0 signals normal exit
+                for (hwl::Statement sb : s.body)
+                    statement(sb);
+        }
+    }
+
+    void    exec(std::string name, henson::Puppet& puppet)
+    {
+        if (stop)
+        {
+            if (verbose) fmt::print("Sending stop to {}\n", name);
+            puppet.signal_stop();
+        }
+        if (verbose) fmt::print("Proceeding with {}\n", name);
+        puppet.proceed();
+
+        if (!puppet.running() && control.control == name)
+        {
+            if (verbose) fmt::print("Control puppet {} stopped in {}\n", name, control.name);
+            stop = true;
+        }
+    }
+
+    bool&                       stop;
+    std::vector<std::string>&   revisit;
+    Puppets&                    puppets;
+    const hwl::ControlFlow&     control;
+    bool                        verbose;
+};
+
 
 int main(int argc, char *argv[])
 {
@@ -188,9 +247,8 @@ int main(int argc, char *argv[])
         prefix = "./" + prefix;
     prefix = prefix.substr(0, prefix.rfind('/') + 1);
 
-    typedef     std::unique_ptr<h::Puppet>          PuppetUniquePtr;
     std::vector<CommandLine>                        command_lines;
-    std::map<std::string, PuppetUniquePtr>          puppets;
+    Puppets                                         puppets;
     for (auto& p : script.puppets)
     {
         // parse and process command variables
@@ -224,36 +282,13 @@ int main(int argc, char *argv[])
     int                     group_size  = procs[color].second;
     const hwl::ControlFlow& control     = script.procs[group];
 
-    bool stop_execution = false;
+    bool                        stop_execution = false;
+    std::vector<std::string>    revisit;
+    Executor                    executor(stop_execution, revisit, puppets, control, verbose);
     do
     {
-        std::vector<std::string>    revisit;
-
-        for (size_t i = 0; i < control.commands.size(); ++i)
-        {
-            std::string name = control.commands[i];
-            if (name[0] == '*')
-            {
-                name = name.substr(1);
-                revisit.push_back(name);
-            }
-
-            auto&               puppet = *puppets[name];
-
-            if (stop_execution)
-            {
-                if (verbose) fmt::print("Sending stop to {}\n", name);
-                puppet.signal_stop();
-            }
-            if (verbose) fmt::print("Proceeding with {}\n", name);
-            puppet.proceed();
-
-            if (!puppet.running() && control.control == name)
-            {
-                if (verbose) fmt::print("Control puppet {} stopped in {}\n", name, control.name);
-                stop_execution = true;
-            }
-        }
+        for (hwl::Statement s : control.commands)
+            executor.statement(s);
 
         // revisit the puppets that need to finilize their execution
         for (auto& name : revisit)
@@ -261,6 +296,7 @@ int main(int argc, char *argv[])
             if (verbose) fmt::print("Revisiting {}\n", name);
             puppets[name]->proceed();
         }
+        revisit.clear();
     } while (!stop_execution);
 
     fmt::print("[{}]: henson done\n", rank);

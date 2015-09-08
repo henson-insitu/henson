@@ -1,0 +1,21 @@
+# Run via mpirun -n 4 .../henson fair.hwl
+
+sim = ../simple/simulation $size(250) $iter(10) $sim_sleep(1)       # 10 iterations, sleep=1
+ana = ../simple/analysis $ana_sleep(3)                              # sleep=3
+
+timer_sim_start = ../../tools/timer start sim
+timer_sim_stop  = ../../tools/timer stop  sim --increment
+timer_sim_reset = ../../tools/timer reset sim
+timer_ana_start = ../../tools/timer start ana
+timer_ana_stop  = ../../tools/timer stop  ana
+timer_cmp       = ../../tools/timer <     ana sim
+
+world while sim:
+    timer_sim_start
+    sim
+    timer_sim_stop
+    if timer_cmp:
+        timer_sim_reset
+        timer_ana_start
+        ana
+        timer_ana_stop
