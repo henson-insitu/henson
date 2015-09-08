@@ -8,7 +8,7 @@ timer_sim_stop  = ../../tools/timer stop  sim --increment
 timer_sim_reset = ../../tools/timer reset sim
 timer_ana_start = ../../tools/timer start ana
 timer_ana_stop  = ../../tools/timer stop  ana
-timer_cmp       = ../../tools/timer <     ana sim
+timer_cmp       = ../../tools/timer <     ana sim   --root
 
 world while sim:
     timer_sim_start
