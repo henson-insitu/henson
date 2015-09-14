@@ -119,6 +119,8 @@ struct Executor
 
 int main(int argc, char *argv[])
 {
+    h::time_type start_time = h::get_time();
+
     MPI_Init(&argc, &argv);
 
     MPI_Comm world = MPI_COMM_WORLD;
@@ -126,8 +128,6 @@ int main(int argc, char *argv[])
     int rank, size;
     MPI_Comm_rank(world, &rank);
     MPI_Comm_size(world, &size);
-
-    fmt::print("[{}]: henson started; total processes = {}\n", rank, size);
 
     std::vector<std::string>    procs_sizes;
     using namespace opts;
@@ -138,6 +138,10 @@ int main(int argc, char *argv[])
 
     bool show_sizes = ops >> Present('s', "show-sizes", "show group sizes");
     bool verbose    = ops >> Present('v', "verbose",    "verbose output");
+    bool times      = ops >> Present('t', "show-times", "show time spent in each puppet");
+
+    if (verbose || rank == 0)
+        fmt::print("[{}]: henson started; total processes = {}\n", rank, size);
 
     std::string script_fn;
     if (  ops >> Present('h', "help", "show help") ||
@@ -282,6 +286,7 @@ int main(int argc, char *argv[])
     int                     group_size  = procs[color].second;
     const hwl::ControlFlow& control     = script.procs[group];
 
+    h::time_type initialization_time = h::get_time() - start_time;
     bool                        stop_execution = false;
     std::vector<std::string>    revisit;
     Executor                    executor(stop_execution, revisit, puppets, control, verbose);
@@ -298,8 +303,57 @@ int main(int argc, char *argv[])
         }
         revisit.clear();
     } while (!stop_execution);
+    h::time_type total_execution_time = h::get_time() - start_time;
 
-    fmt::print("[{}]: henson done\n", rank);
+    if (verbose || rank == 0)
+        fmt::print("[{}]: henson done\n", rank);
+
+    h::time_type puppet_time = 0;
+    if (times)
+    {
+        std::vector< std::tuple<std::string, h::time_type> >    max_puppet_times;
+        for (auto& p : puppets)
+        {
+            if (!control.uses(p.first)) continue;
+            h::time_type t = p.second->total_time();
+
+            if (verbose)
+                fmt::print("[{}]: {} took {}\n", rank, p.first, h::clock_to_string(t));
+
+            h::time_type max_t;
+            MPI_Reduce(&t, &max_t, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, procmap->local());
+            max_puppet_times.emplace_back(p.first, max_t);
+
+            puppet_time += t;
+        }
+        h::time_type context_switching_time = total_execution_time - puppet_time - initialization_time;
+
+        h::time_type max_init, max_context_switching, max_puppet_time, max_total_time;
+        MPI_Reduce(&initialization_time,    &max_init,              1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, procmap->local());
+        MPI_Reduce(&context_switching_time, &max_context_switching, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, procmap->local());
+        MPI_Reduce(&puppet_time,            &max_puppet_time,       1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, procmap->local());
+        MPI_Reduce(&total_execution_time,   &max_total_time,        1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, procmap->local());
+
+        if (procmap->is_leader(rank))
+        {
+            fmt::print("Max times for group {}: init = {}, context switch = {}; puppet = {}; total = {}\n",
+                       group,
+                       h::clock_to_string(max_init),
+                       h::clock_to_string(max_context_switching),
+                       h::clock_to_string(max_puppet_time),
+                       h::clock_to_string(max_total_time));
+            for (auto& x : max_puppet_times)
+                fmt::print("  Max time for {} in group {}: {}\n", std::get<0>(x), group, h::clock_to_string(std::get<1>(x)));
+        }
+
+        if (verbose)
+            fmt::print("[{}]: initialization = {}; context switching = {}; puppet time = {}; total time = {}\n",
+                       rank,
+                       h::clock_to_string(initialization_time),
+                       h::clock_to_string(context_switching_time),
+                       h::clock_to_string(puppet_time),
+                       h::clock_to_string(total_execution_time));
+    }
 
     MPI_Finalize();
 }

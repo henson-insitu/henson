@@ -15,6 +15,7 @@
 #include <format.h>
 #include <henson/data.hpp>
 #include <henson/procs.hpp>
+#include <henson/time.hpp>
 
 namespace henson
 {
@@ -66,7 +67,7 @@ struct Puppet
     Puppet&             operator=(const Puppet&)=delete;
     Puppet&             operator=(Puppet&&)     =delete;
 
-    void                proceed()               { bc::jump_fcontext(&from_, to_, (intptr_t) this); }
+    void                proceed()               { start_time_ = get_time(); bc::jump_fcontext(&from_, to_, (intptr_t) this); time_type diff = get_time() - start_time_; total_time_ += diff; }
     void                yield()                 { bc::jump_fcontext(&to_, from_, 0); }
 
     void                signal_stop()           { stop_ = 1; }
@@ -74,7 +75,20 @@ struct Puppet
     bool                running() const         { return running_; }
     int                 result() const          { return result_; }
 
-    static void         exec(intptr_t self_)    { while(true) { Puppet* self = (Puppet*) self_; self->running_ = true; self->result_ = self->main_(self->argc_,self->argv_); self->running_ = false; self->yield(); } }
+    time_type           total_time() const      { return total_time_; }
+
+    static void         exec(intptr_t self_)
+    {
+        while(true)
+        {
+            Puppet* self = (Puppet*) self_;
+            self->running_ = true;
+            self->start_time_ = get_time();
+            self->result_ = self->main_(self->argc_,self->argv_);
+            self->running_ = false;
+            self->yield();      // the time for the final portion will get recorded thanks to this call
+        }
+    }
 
     template<class T>
     T                   get_function(void* lib, const char* name)
@@ -97,6 +111,9 @@ struct Puppet
     bool                running_;
     int                 stop_ = 0;
     int                 result_ = -1;
+
+    time_type           start_time_;
+    time_type           total_time_ = 0;
 };
 
 

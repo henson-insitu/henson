@@ -1,6 +1,8 @@
 #ifndef HENSON_TIME_HPP
 #define HENSON_TIME_HPP
 
+#include <string>
+
 #include <sys/time.h>
 
 #ifdef __MACH__
@@ -11,7 +13,7 @@
 namespace henson
 {
 
-typedef             unsigned long                       time_type;
+typedef             unsigned long long                  time_type;
 
 inline
 time_type
@@ -27,7 +29,26 @@ get_time()
     timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
 #endif
-    return ts.tv_sec*1000 + ts.tv_nsec/1000000;
+    //return ts.tv_sec*1000 + ts.tv_nsec/1000000;
+
+    time_type result = ts.tv_sec;
+    result *= 1000000000;
+    result += ts.tv_nsec;
+    return result;
+}
+
+inline
+std::string
+clock_to_string(time_type time)
+{
+    time /= 1000;       // microsecond
+    char buf[13];       // +1 for the trailing null
+    sprintf(buf, "%02d:%02d:%02d.%06d",
+            (unsigned) time/1000000/60/60,
+            (unsigned) time/1000000/60 % 60,
+            (unsigned) time/1000000 % 60,
+            (unsigned) time % 1000000);
+    return buf;
 }
 
 }

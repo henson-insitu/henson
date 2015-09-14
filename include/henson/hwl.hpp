@@ -66,6 +66,8 @@ struct Statement
                     Statement(std::string c, std::vector<Statement> b):
                         call(c), body(b)                        {}
 
+    bool            uses(std::string n) const                   { if (call == n) return true; for (auto& s : body) if (s.uses(n)) return true; return false; }
+
     std::string             call;
     std::vector<Statement>  body;
 };
@@ -76,6 +78,7 @@ struct ControlFlow
 
     void            set_body(std::vector<Statement> body)       { commands = body; }
     void            set_control(std::string c)                  { control = c; }
+    bool            uses(std::string n) const                   { for (auto& s : commands) if (s.uses(n)) return true; return false; }
 
     std::string                 name;
     std::vector<Statement>      commands;

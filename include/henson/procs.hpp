@@ -49,6 +49,7 @@ class ProcMap
         int         color() const                                           { return color_; }
         int         leader(const std::string& name) const                   { return leaders_.find(name)->second; }
         int         size(const std::string& name) const                     { return procs_.find(name)->second; }
+        bool        is_leader(int rank) const                               { for (Map::const_iterator it = leaders_.begin(); it != leaders_.end(); ++it) if (it->second == rank) return true; return false; }
 
         MPI_Comm    intercomm(const std::string& to, int tag = 0) const
         {
