@@ -244,6 +244,11 @@ int main(int argc, char *argv[])
 
     henson::NameMap                     namemap;        // global namespace shared by the puppets
 
+    int                     color       = procmap->color();
+    std::string             group       = procs[color].first;
+    int                     group_size  = procs[color].second;
+    const hwl::ControlFlow& control     = script.procs[group];
+
     // convert script into puppets
     // TODO: technically, we don't need to load puppets that we don't need, but I'm guessing it's a small overhead
     std::string prefix = script_fn;
@@ -255,6 +260,8 @@ int main(int argc, char *argv[])
     Puppets                                         puppets;
     for (auto& p : script.puppets)
     {
+        if (!control.uses(p.name)) continue;
+
         // parse and process command variables
         //fmt::print("Parsing command: {}\n", p.command);
         hwl::Command cmd;
@@ -280,11 +287,6 @@ int main(int argc, char *argv[])
                                                         procmap.get(),
                                                         &namemap));
     }
-
-    int                     color       = procmap->color();
-    std::string             group       = procs[color].first;
-    int                     group_size  = procs[color].second;
-    const hwl::ControlFlow& control     = script.procs[group];
 
     h::time_type initialization_time = h::get_time() - start_time;
     bool                        stop_execution = false;
