@@ -62,7 +62,15 @@ struct Statement
                     Statement(std::string c, std::vector<Statement> b):
                         call(c), body(b)                        {}
 
-    bool            uses(std::string n) const                   { if (call == n) return true; for (auto& s : body) if (s.uses(n)) return true; return false; }
+    bool            uses(std::string n) const
+    {
+        if (call == n) return true;
+        if (call[0] == '*' && call.substr(1) == n) return true;
+        for (auto& s : body)
+            if (s.uses(n))
+                return true;
+        return false;
+    }
 
     std::string             call;
     std::vector<Statement>  body;
