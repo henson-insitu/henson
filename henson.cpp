@@ -139,6 +139,7 @@ int main(int argc, char *argv[])
     bool show_sizes = ops >> Present('s', "show-sizes", "show group sizes");
     bool verbose    = ops >> Present('v', "verbose",    "verbose output");
     bool times      = ops >> Present('t', "show-times", "show time spent in each puppet");
+    bool every_iteration = ops >> Present("every-iteration", "report times at every iteration");
 
     if (verbose || rank == 0)
         fmt::print("[{}]: henson started; total processes = {}\n", rank, size);
@@ -288,31 +289,13 @@ int main(int argc, char *argv[])
                                                         &namemap));
     }
 
+    // Timer reporter
     h::time_type initialization_time = h::get_time() - start_time;
-    bool                        stop_execution = false;
-    std::vector<std::string>    revisit;
-    Executor                    executor(stop_execution, revisit, puppets, control, verbose);
-    do
+    auto report_times = [&](size_t iteration)
     {
-        for (hwl::Statement s : control.commands)
-            executor.statement(s);
+        h::time_type puppet_time = 0;
+        h::time_type total_execution_time = h::get_time() - start_time;
 
-        // revisit the puppets that need to finilize their execution
-        for (auto& name : revisit)
-        {
-            if (verbose) fmt::print("Revisiting {}\n", name);
-            puppets[name]->proceed();
-        }
-        revisit.clear();
-    } while (!stop_execution);
-    h::time_type total_execution_time = h::get_time() - start_time;
-
-    if (verbose || rank == 0)
-        fmt::print("[{}]: henson done\n", rank);
-
-    h::time_type puppet_time = 0;
-    if (times)
-    {
         std::vector< std::tuple<std::string, h::time_type> >    max_puppet_times;
         for (auto& p : puppets)
         {
@@ -338,24 +321,53 @@ int main(int argc, char *argv[])
 
         if (procmap->is_leader(rank))
         {
-            fmt::print("Max times for group {}: init = {}, context switch = {}; puppet = {}; total = {}\n",
-                       group,
+            fmt::print("Max times (iter={}) for group {}:\n  init = {}, other = {}; puppet = {}; total = {}\n",
+                       iteration, group,
                        h::clock_to_string(max_init),
                        h::clock_to_string(max_context_switching),
                        h::clock_to_string(max_puppet_time),
                        h::clock_to_string(max_total_time));
             for (auto& x : max_puppet_times)
-                fmt::print("  Max time for {} in group {}: {}\n", std::get<0>(x), group, h::clock_to_string(std::get<1>(x)));
+                fmt::print("  Max time (iter={}) for {} in group {}: {}\n", iteration, std::get<0>(x), group, h::clock_to_string(std::get<1>(x)));
         }
 
         if (verbose)
-            fmt::print("[{}]: initialization = {}; context switching = {}; puppet time = {}; total time = {}\n",
+            fmt::print("[{}]: initialization = {}; other = {}; puppet time = {}; total time = {}\n",
                        rank,
                        h::clock_to_string(initialization_time),
                        h::clock_to_string(context_switching_time),
                        h::clock_to_string(puppet_time),
                        h::clock_to_string(total_execution_time));
-    }
+    };
+
+    bool                        stop_execution = false;
+    std::vector<std::string>    revisit;
+    Executor                    executor(stop_execution, revisit, puppets, control, verbose);
+    size_t                      iteration = 0;
+    do
+    {
+        for (hwl::Statement s : control.commands)
+            executor.statement(s);
+
+        // revisit the puppets that need to finilize their execution
+        for (auto& name : revisit)
+        {
+            if (verbose) fmt::print("Revisiting {}\n", name);
+            puppets[name]->proceed();
+        }
+        revisit.clear();
+
+        if (times && every_iteration)
+            report_times(iteration);
+
+        ++iteration;
+    } while (!stop_execution);
+
+    if (verbose || rank == 0)
+        fmt::print("[{}]: henson done\n", rank);
+
+    if (times)
+        report_times(iteration);
 
     MPI_Finalize();
 }
