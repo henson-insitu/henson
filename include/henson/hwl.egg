@@ -171,7 +171,7 @@ command   : Command             = (  <(!'$' . )+>:s         { psVal.add_string(s
 variable  : Variable            = '$' name : n ('(' <(!')' .)*>:v ')' { psVal.value = v; } )?   { psVal.name = n; }
 
 
-name     : std::string          = < letter (letter | number)* > : psVal
+name     : std::string          = < letter (letter | number | '-')* > : psVal
 
 letter  = [a-z] | [A-Z] | '_'
 number  = [0-9]

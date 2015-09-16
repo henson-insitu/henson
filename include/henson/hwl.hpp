@@ -353,7 +353,8 @@ namespace hwl {
 				parser::memoize_many(15, 
 					parser::choice({
 						letter,
-						number}))})))(ps);
+						number,
+						parser::literal('-')}))})))(ps);
 	}
 
 	bool letter(parser::state& ps) {
