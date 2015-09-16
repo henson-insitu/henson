@@ -328,7 +328,7 @@ int main(int argc, char *argv[])
                        h::clock_to_string(max_puppet_time),
                        h::clock_to_string(max_total_time));
             for (auto& x : max_puppet_times)
-                fmt::print("  Max time (iter={}) for {} in group {}: {}\n", iteration, std::get<0>(x), group, h::clock_to_string(std::get<1>(x)));
+                fmt::print("  Max time (iter={}) for {:<12} in group {}: {}\n", iteration, std::get<0>(x), group, h::clock_to_string(std::get<1>(x)));
         }
 
         if (verbose)
