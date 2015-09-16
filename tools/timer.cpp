@@ -5,23 +5,23 @@
 #include <henson/data.h>
 #include <henson/data.hpp>
 #include <henson/context.h>
+namespace h = henson;
 
 #include <henson/time.hpp>
 
 #include <format.h>
 #include <opts/opts.h>
 
-std::string timer(std::string name)                 { return "timer_" + name; }
-std::string timer_start(std::string name)           { return "timer_start_" + name; }
+std::string     timer(std::string name)                     { return "timer_" + name; }
+std::string     timer_start(std::string name)               { return "timer_start_" + name; }
 
-size_t      get_henson_timer(std::string name)
+void            save_time(std::string name, h::time_type t) { h::save(name, new h::Value<h::time_type>(t)); }
+h::time_type    load_time(std::string name)                 { return h::load< h::Value<h::time_type> >(name)->value; }
+
+h::time_type    get_henson_timer(std::string name)
 {
     if (!henson::exists(timer(name))) return 0;
-
-    size_t t;
-    henson_load_size_t(timer(name).c_str(), &t);
-
-    return t;
+    return load_time(timer(name));
 }
 
 int main(int argc, char** argv)
@@ -48,35 +48,35 @@ int main(int argc, char** argv)
         std::string name;
         ops >> PosOption(name);
 
-        henson_save_size_t(timer_start(name).c_str(), henson::get_time());
+
+        save_time(timer_start(name), henson::get_time());
     } else if (cmd == "stop")
     {
         std::string name;
         ops >> PosOption(name);
 
-        size_t start;
-        henson_load_size_t(timer_start(name).c_str(), &start);
-        size_t elapsed = henson::get_time() - start;
+        h::time_type start = load_time(timer_start(name));
+        h::time_type elapsed = henson::get_time() - start;
 
         if (!increment)
-            henson_save_size_t(timer(name).c_str(), elapsed);
+            save_time(timer(name), elapsed);
         else
         {
-            size_t cur = get_henson_timer(name);
-            henson_save_size_t(timer(name).c_str(), cur + elapsed);
+            h::time_type cur = get_henson_timer(name);
+            save_time(timer(name), cur + elapsed);
         }
     } else if (cmd == "reset")
     {
         std::string name;
         ops >> PosOption(name);
-        henson_save_size_t(timer(name).c_str(), 0);
+        save_time(timer(name), 0);
     } else if (cmd == "<" || cmd == "<=" || cmd == ">" || cmd == ">=")
     {
         std::string name1, name2;
         ops >> PosOption(name1) >> PosOption(name2);
 
-        size_t t1 = get_henson_timer(name1),
-               t2 = get_henson_timer(name2);
+        h::time_type t1 = get_henson_timer(name1),
+                     t2 = get_henson_timer(name2);
 
         int res;
         if (!root || rank == 0)
@@ -98,5 +98,14 @@ int main(int argc, char** argv)
             MPI_Bcast(&res, 1, MPI_INT, 0, world);
 
         return res;
+    } else if (cmd == "report")
+    {
+        std::string name;
+        ops >> PosOption(name);
+
+        h::time_type start = load_time(timer_start(name));
+        h::time_type elapsed = henson::get_time() - start;
+
+        fmt::print("Elapsed: {}\n", h::clock_to_string(elapsed));
     }
 }

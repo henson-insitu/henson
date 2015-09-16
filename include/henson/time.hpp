@@ -42,7 +42,7 @@ std::string
 clock_to_string(time_type time)
 {
     time /= 1000;       // microsecond
-    char buf[13];       // +1 for the trailing null
+    char buf[16];       // +1 for the trailing null
     sprintf(buf, "%02d:%02d:%02d.%06d",
             (unsigned) time/1000000/60/60,
             (unsigned) time/1000000/60 % 60,
