@@ -22,6 +22,12 @@ clock_to_seconds(h::time_type t)
     return fmt::format("{}.{:02}", t / 1000000000, (t % 1000000000 / 10000000));
 }
 
+std::string
+clock_output(h::time_type t)
+{
+    return fmt::format("{} ({})", h::clock_to_string(t), clock_to_seconds(t));
+}
+
 struct CommandLine
 {
     // need to disallow copy to avoid pitfalls with the argv pointers into arguments
@@ -327,30 +333,25 @@ int main(int argc, char *argv[])
 
         if (procmap->is_leader(rank))
         {
-            fmt::print("Max times (iter={}) for group {}:\n  init = {} ({}), other = {} ({}); puppet = {} ({}); total = {} ({})\n",
+            fmt::print("Max times (iter={}) for group {}:\n  init = {}, other = {}; puppet = {}; total = {}\n",
                        iteration, group,
-                       h::clock_to_string(max_init),
-                       clock_to_seconds(max_init),
-                       h::clock_to_string(max_context_switching),
-                       clock_to_seconds(max_context_switching),
-                       h::clock_to_string(max_puppet_time),
-                       clock_to_seconds(max_puppet_time),
-                       h::clock_to_string(max_total_time),
-                       clock_to_seconds(max_total_time));
+                       clock_output(max_init),
+                       clock_output(max_context_switching),
+                       clock_output(max_puppet_time),
+                       clock_output(max_total_time));
             for (auto& x : max_puppet_times)
-                fmt::print("  Max time (iter={}) for {:<12} in group {}: {} ({})\n",
+                fmt::print("  Max time (iter={}) for {:<12} in group {}: {}\n",
                            iteration, std::get<0>(x), group,
-                           h::clock_to_string(std::get<1>(x)),
-                           clock_to_seconds(std::get<1>(x)));
+                           clock_output(std::get<1>(x)));
         }
 
         if (verbose)
             fmt::print("[{}]: initialization = {}; other = {}; puppet time = {}; total time = {}\n",
                        rank,
-                       h::clock_to_string(initialization_time),
-                       h::clock_to_string(context_switching_time),
-                       h::clock_to_string(puppet_time),
-                       h::clock_to_string(total_execution_time));
+                       clock_output(initialization_time),
+                       clock_output(context_switching_time),
+                       clock_output(puppet_time),
+                       clock_output(total_execution_time));
     };
 
     bool                        stop_execution = false;
