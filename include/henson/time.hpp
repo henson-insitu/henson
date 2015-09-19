@@ -43,11 +43,11 @@ clock_to_string(time_type time)
 {
     time /= 1000;       // microsecond
     char buf[16];       // +1 for the trailing null
-    sprintf(buf, "%02d:%02d:%02d.%06d",
-            (unsigned) time/1000000/60/60,
-            (unsigned) time/1000000/60 % 60,
-            (unsigned) time/1000000 % 60,
-            (unsigned) time % 1000000);
+    sprintf(buf, "%02llu:%02llu:%02llu.%06llu",
+            time/1000000/60/60,
+            time/1000000/60 % 60,
+            time/1000000 % 60,
+            time % 1000000);
     return buf;
 }
 
