@@ -9,6 +9,8 @@ namespace py = pybind11;
 #include <henson/procs.hpp>
 #include <henson/data.hpp>
 
+#include "mpi.hpp"
+
 struct PyArray: public henson::Array
 {
     PyArray(henson::Array a, std::string f):
@@ -58,7 +60,7 @@ PYBIND_PLUGIN(pyhenson)
                             { return "Puppet: " + p.filename_; });
 
     py::class_<ProcMap>(m, "ProcMap")
-        .def(py::init<MPI_Comm, ProcMap::Vector>());
+        .def(py::init<communicator, ProcMap::Vector>());
 
     py::class_<PyArray>(m,   "Array")
         .def_buffer([](PyArray& a) -> py::buffer_info
@@ -97,11 +99,6 @@ PYBIND_PLUGIN(pyhenson)
         .def("clear",       &NameMap::clear);
 
     m.def("clock_to_string",  &clock_to_string);
-
-    // a hack for now, until we can interface with mpi4py properly
-    m.def("MPI_COMM_WORLD", []() -> MPI_Comm    { return MPI_COMM_WORLD; });
-    m.def("MPI_Init",   []()                    { MPI_Init(0,0); });
-    m.def("MPI_Finalize", []()                  { MPI_Finalize(); });
 
     return m.ptr();
 }

@@ -8,26 +8,32 @@ add_library                 (pyhenson SHARED henson.cpp)
 target_link_libraries       (pyhenson format ${libraries} ${Boost_CONTEXT_LIBRARY})
 set_target_properties       (pyhenson PROPERTIES COMPILE_FLAGS "-std=c++11")
 
-set_target_properties       (pyhenson PROPERTIES PREFIX "")
-set_target_properties       (pyhenson PROPERTIES SUFFIX ".so")
+add_library                 (pympi SHARED mpi.cpp)
+target_link_libraries       (pympi format ${libraries})
+set_target_properties       (pympi PROPERTIES COMPILE_FLAGS "-std=c++11")
+
+foreach                     (m pyhenson pympi)
+set_target_properties       (${m} PROPERTIES PREFIX "")
+set_target_properties       (${m} PROPERTIES SUFFIX ".so")
 
 # Optimize for a small binary size
 if                          (NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
-  set_target_properties     (pyhenson PROPERTIES COMPILE_FLAGS "-Os")
+  set_target_properties     (${m} PROPERTIES COMPILE_FLAGS "-Os")
 endif                       ()
 
 # Strip unnecessary sections of the binary on Linux/Mac OS
 if                          (APPLE)
-  set_target_properties     (pyhenson PROPERTIES MACOSX_RPATH ".")
-  set_target_properties     (pyhenson PROPERTIES LINK_FLAGS "-undefined dynamic_lookup -dead_strip")
+  set_target_properties     (${m} PROPERTIES MACOSX_RPATH ".")
+  set_target_properties     (${m} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup -dead_strip")
   if                        (NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
-      add_custom_command    (TARGET pyhenson POST_BUILD COMMAND strip -u -r ${CMAKE_CURRENT_BINARY_DIR}/pyhenson.so)
+      add_custom_command    (TARGET ${m} POST_BUILD COMMAND strip -u -r ${CMAKE_CURRENT_BINARY_DIR}/${m}.so)
   endif                     ()
 else                        ()
   if                        (NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
-    add_custom_command      (TARGET pyhenson POST_BUILD COMMAND strip ${CMAKE_CURRENT_BINARY_DIR}/pyhenson.so)
+    add_custom_command      (TARGET ${m} POST_BUILD COMMAND strip ${CMAKE_CURRENT_BINARY_DIR}/${m}.so)
   endif                     ()
 endif                       ()
+endforeach                  ()
 
 
 add_custom_command          (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/test.py
