@@ -1,0 +1,36 @@
+#set                         (Python_ADDITIONAL_VERSIONS 3.4 3.5 3.6)
+find_package                (PythonLibs REQUIRED)
+find_package                (PythonInterp REQUIRED)
+
+include_directories         (${PYTHON_INCLUDE_DIR} include)
+
+add_library                 (pyhenson SHARED henson.cpp)
+target_link_libraries       (pyhenson format ${libraries} ${Boost_CONTEXT_LIBRARY})
+set_target_properties       (pyhenson PROPERTIES COMPILE_FLAGS "-std=c++11")
+
+set_target_properties       (pyhenson PROPERTIES PREFIX "")
+set_target_properties       (pyhenson PROPERTIES SUFFIX ".so")
+
+# Optimize for a small binary size
+if                          (NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
+  set_target_properties     (pyhenson PROPERTIES COMPILE_FLAGS "-Os")
+endif                       ()
+
+# Strip unnecessary sections of the binary on Linux/Mac OS
+if                          (APPLE)
+  set_target_properties     (pyhenson PROPERTIES MACOSX_RPATH ".")
+  set_target_properties     (pyhenson PROPERTIES LINK_FLAGS "-undefined dynamic_lookup -dead_strip")
+  if                        (NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
+      add_custom_command    (TARGET pyhenson POST_BUILD COMMAND strip -u -r ${CMAKE_CURRENT_BINARY_DIR}/pyhenson.so)
+  endif                     ()
+else                        ()
+  if                        (NOT ${U_CMAKE_BUILD_TYPE} MATCHES DEBUG)
+    add_custom_command      (TARGET pyhenson POST_BUILD COMMAND strip ${CMAKE_CURRENT_BINARY_DIR}/pyhenson.so)
+  endif                     ()
+endif                       ()
+
+
+add_custom_command          (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/test.py
+                             COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/test.py ${CMAKE_CURRENT_BINARY_DIR}/test.py
+                             MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/test.py)
+add_custom_target           (test.py ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/test.py)
