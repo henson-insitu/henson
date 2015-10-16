@@ -269,7 +269,6 @@ int main(int argc, char *argv[])
         prefix = "./" + prefix;
     prefix = prefix.substr(0, prefix.rfind('/') + 1);
 
-    std::vector<CommandLine>                        command_lines;
     Puppets                                         puppets;
     for (auto& p : script.puppets)
     {
@@ -289,8 +288,7 @@ int main(int argc, char *argv[])
         auto cmd_expanded = cmd.generate(variables);
         //fmt::print("Command parsed and expanded: {}\n", cmd_expanded);
 
-        command_lines.emplace_back(cmd_expanded);
-        auto& cmd_line = command_lines.back();
+        auto cmd_line = CommandLine(cmd_expanded);
         auto exec = cmd_line.executable();
         if (exec[0] != '/' && exec[0] != '~')
             exec = prefix + exec;

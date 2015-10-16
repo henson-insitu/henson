@@ -32,8 +32,15 @@ struct Puppet
 
                         Puppet(const std::string& fn, int argc, char** argv, ProcMap* procmap, NameMap* namemap):
                             filename_(fn),
-                            argc_(argc), argv_(argv)
+                            argc_(argc), argv_(argc_)
                         {
+                            for (size_t i = 0; i < argc_; ++i)
+                            {
+                                argv_[i] = new char[strlen(argv[i]) + 1];
+                                strcpy(argv_[i], argv[i]);
+                                fmt::print("Got argument: {}\n", argv_[i]);
+                            }
+
                             void* lib = dlopen(fn.c_str(), RTLD_LAZY);
 
                             main_ = get_function<MainType>(lib, "main");
@@ -57,7 +64,7 @@ struct Puppet
                             to_ = bc::make_fcontext(stack_.sp, stack_.size, exec);
                         }
 
-                        ~Puppet()               { allocator_.deallocate(stack_); }
+                        ~Puppet()               { for (char* a : argv_) delete[] a; allocator_.deallocate(stack_); }
 
     // can't even move a puppet since the addresses of its from_ and to_ fields
     // are stored in the modules (saved via henson_set_context, in the constructor above)
@@ -84,7 +91,7 @@ struct Puppet
             Puppet* self = (Puppet*) self_;
             self->running_ = true;
             self->start_time_ = get_time();
-            self->result_ = self->main_(self->argc_,self->argv_);
+            self->result_ = self->main_(self->argc_,&self->argv_[0]);
             self->running_ = false;
             self->yield();      // the time for the final portion will get recorded thanks to this call
         }
@@ -101,7 +108,7 @@ struct Puppet
 
     std::string         filename_;
     int                 argc_;
-    char**              argv_;
+    std::vector<char*>  argv_;
     bc::stack_context   stack_;
     bc::fixedsize_stack allocator_;
     //bc::protected_fixedsize_stack allocator_;
