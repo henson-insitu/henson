@@ -9,6 +9,13 @@ namespace py = pybind11;
 #include <henson/procs.hpp>
 #include <henson/data.hpp>
 
+struct PyArray: public henson::Array
+{
+    PyArray(henson::Array a, std::string f):
+        henson::Array(a), format(f)             {}
+    std::string format;
+};
+
 PYBIND_PLUGIN(pyhenson)
 {
     py::module m("pyhenson", "Henson bindings");
@@ -53,8 +60,41 @@ PYBIND_PLUGIN(pyhenson)
     py::class_<ProcMap>(m, "ProcMap")
         .def(py::init<MPI_Comm, ProcMap::Vector>());
 
+    py::class_<PyArray>(m,   "Array")
+        .def_buffer([](PyArray& a) -> py::buffer_info
+                    {
+                        return py::buffer_info
+                               { a.address,
+                                 a.type,
+                                 a.format,
+                                 1,
+                                 { a.count },
+                                 { a.stride }
+                               };
+                    });
+
     py::class_<NameMap>(m, "NameMap")
-        .def(py::init<>());
+        .def(py::init<>())
+        .def("get_array",   [](const NameMap& nm, std::string name, std::string format) { return PyArray(*nm.get<Array>(name), format); })
+        .def("get",         [](const NameMap& nm, std::string name, std::string format) -> py::object
+                            {
+                                if (format == "f")
+                                    return py::float_(nm.get<Value<float>>(name)->value);
+                                else if (format == "d")
+                                    return py::float_(nm.get<Value<double>>(name)->value);
+                                else if (format == "i")
+                                    return py::int_(nm.get<Value<int>>(name)->value);
+                                //else if (format == "I")
+                                //    return py::int_(nm.get<Value<uint32_t>>(name)->value);
+                                //else if (format == "q")
+                                //    return py::int_(nm.get<Value<int64_t>>(name)->value);
+                                else if (format == "Q")
+                                    return py::int_(nm.get<Value<size_t>>(name)->value);
+                                else
+                                    throw py::cast_error("Unkown format: " + format);
+                            })
+        .def("exists",      &NameMap::exists)
+        .def("clear",       &NameMap::clear);
 
     m.def("clock_to_string",  &clock_to_string);
 
