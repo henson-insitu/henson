@@ -38,7 +38,6 @@ struct Puppet
                             {
                                 argv_[i] = new char[strlen(argv[i]) + 1];
                                 strcpy(argv_[i], argv[i]);
-                                fmt::print("Got argument: {}\n", argv_[i]);
                             }
 
                             void* lib = dlopen(fn.c_str(), RTLD_LAZY);
