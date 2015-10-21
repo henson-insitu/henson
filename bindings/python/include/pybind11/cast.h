@@ -18,16 +18,10 @@
 NAMESPACE_BEGIN(pybind11)
 NAMESPACE_BEGIN(detail)
 
-#if defined(_MSC_VER)
-#define NOINLINE __declspec(noinline)
-#else
-#define NOINLINE __attribute__ ((noinline))
-#endif
-
 #if PY_MAJOR_VERSION >= 3
-#define PYBIND_AS_STRING PyBytes_AsString
+#define PYBIND11_AS_STRING PyBytes_AsString
 #else
-#define PYBIND_AS_STRING PyString_AsString
+#define PYBIND11_AS_STRING PyString_AsString
 #endif
 
 /** Linked list descriptor type for function signatures (produces smaller binaries
@@ -44,35 +38,35 @@ public:
 
     descr() { }
     descr(descr &&d) : first(d.first), last(d.last) { d.first = d.last = nullptr; }
-    NOINLINE descr(const char *str) { first = last = new entry { str }; }
-    NOINLINE descr(const std::type_info &type) { first = last = new entry { &type }; }
+    PYBIND11_NOINLINE descr(const char *str) { first = last = new entry { str }; }
+    PYBIND11_NOINLINE descr(const std::type_info &type) { first = last = new entry { &type }; }
 
-    NOINLINE void operator+(const char *str) {
+    PYBIND11_NOINLINE void operator+(const char *str) {
         entry *next = new entry { str };
         last->next = next;
         last = next;
     }
 
-    NOINLINE void operator+(const std::type_info *type) {
+    PYBIND11_NOINLINE void operator+(const std::type_info *type) {
         entry *next = new entry { type };
         last->next = next;
         last = next;
     }
 
-    NOINLINE void operator+=(descr &&other) {
+    PYBIND11_NOINLINE void operator+=(descr &&other) {
         last->next = other.first;
         while (last->next)
             last = last->next;
         other.first = other.last = nullptr;
     }
 
-    NOINLINE friend descr operator+(descr &&l, descr &&r) {
+    PYBIND11_NOINLINE friend descr operator+(descr &&l, descr &&r) {
         descr result(std::move(l));
         result += std::move(r);
         return result;
     }
 
-    NOINLINE std::string str() const {
+    PYBIND11_NOINLINE std::string str() const {
         std::string result;
         auto const& registered_types = get_internals().registered_types;
         for (entry *it = first; it != nullptr; it = it->next) {
@@ -92,7 +86,7 @@ public:
         return result;
     }
 
-    NOINLINE ~descr() {
+    PYBIND11_NOINLINE ~descr() {
         while (first) {
             entry *tmp = first->next;
             delete first;
@@ -104,27 +98,31 @@ public:
     entry *last = nullptr;
 };
 
-#undef NOINLINE
-
-/// Generic type caster for objects stored on the heap
-template <typename type> class type_caster {
+class type_caster_custom {
 public:
-    typedef instance<type> instance_type;
-
-    static descr name() { return typeid(type); }
-
-    type_caster() {
-        auto const& registered_types = get_internals().registered_types;
-        auto it = registered_types.find(&typeid(type));
-        if (it != registered_types.end())
+    PYBIND11_NOINLINE type_caster_custom(const std::type_info *type_info) {
+        auto & registered_types = get_internals().registered_types;
+        auto it = registered_types.find(type_info);
+        if (it != registered_types.end()) {
             typeinfo = &it->second;
+        } else {
+            /* Unknown type?! Since std::type_info* often varies across
+               module boundaries, the following does an explicit check */
+            for (auto const &type : registered_types) {
+                if (strcmp(type.first->name(), type_info->name()) == 0) {
+                    registered_types[type_info] = type.second;
+                    typeinfo = &type.second;
+                    break;
+                }
+            }
+        }
     }
 
-    bool load(PyObject *src, bool convert) {
+    PYBIND11_NOINLINE bool load(PyObject *src, bool convert) {
         if (src == nullptr || typeinfo == nullptr)
             return false;
         if (PyType_IsSubtype(Py_TYPE(src), typeinfo->type)) {
-            value = ((instance_type *) src)->value;
+            value = ((instance<void> *) src)->value;
             return true;
         }
         if (convert) {
@@ -137,14 +135,9 @@ public:
         return false;
     }
 
-    static PyObject *cast(const type &src, return_value_policy policy, PyObject *parent) {
-        if (policy == return_value_policy::automatic)
-            policy = return_value_policy::copy;
-        return cast(&src, policy, parent);
-    }
-
-    static PyObject *cast(const type *_src, return_value_policy policy, PyObject *parent) {
-        type *src = const_cast<type *>(_src);
+    PYBIND11_NOINLINE static PyObject *cast(const void *_src, return_value_policy policy, PyObject *parent,
+                                            const std::type_info *type_info, void *(*copy_constructor)(const void *)) {
+        void *src = const_cast<void *>(_src);
         if (src == nullptr) {
             Py_INCREF(Py_None);
             return Py_None;
@@ -159,62 +152,73 @@ public:
             Py_INCREF(inst);
             return inst;
         }
-        auto it = internals.registered_types.find(&typeid(type));
+        auto it = internals.registered_types.find(type_info);
         if (it == internals.registered_types.end()) {
-            std::string msg = std::string("Unregistered type : ") + type_id<type>();
+            std::string msg = std::string("Unregistered type : ") + type_info->name();
+            detail::clean_type_id(msg);
             PyErr_SetString(PyExc_TypeError, msg.c_str());
             return nullptr;
         }
-        auto &type_info = it->second;
-        instance_type *inst = (instance_type *) PyType_GenericAlloc(type_info.type, 0);
+        auto &reg_type = it->second;
+        instance<void> *inst = (instance<void> *) PyType_GenericAlloc(reg_type.type, 0);
         inst->value = src;
         inst->owned = true;
         inst->parent = nullptr;
         if (policy == return_value_policy::automatic)
             policy = return_value_policy::take_ownership;
-        handle_return_value_policy<type>(inst, policy, parent);
+        if (policy == return_value_policy::copy) {
+            inst->value = copy_constructor(inst->value);
+            if (inst->value == nullptr)
+                throw cast_error("return_value_policy = copy, but the object is non-copyable!");
+        } else if (policy == return_value_policy::reference) {
+            inst->owned = false;
+        } else if (policy == return_value_policy::reference_internal) {
+            inst->owned = false;
+            inst->parent = parent;
+            Py_XINCREF(parent);
+        }
         PyObject *inst_pyobj = (PyObject *) inst;
-        type_info.init_holder(inst_pyobj);
+        reg_type.init_holder(inst_pyobj);
         if (!dont_cache)
             internals.registered_instances[inst->value] = inst_pyobj;
         return inst_pyobj;
     }
 
-    template <class T, typename std::enable_if<std::is_copy_constructible<T>::value, int>::type = 0>
-    static void handle_return_value_policy(instance<T> *inst, return_value_policy policy, PyObject *parent) {
-        if (policy == return_value_policy::copy) {
-            inst->value = new T(*(inst->value));
-        } else if (policy == return_value_policy::reference) {
-            inst->owned = false;
-        } else if (policy == return_value_policy::reference_internal) {
-            inst->owned = false;
-            inst->parent = parent;
-            Py_XINCREF(parent);
-        }
-    }
-
-    template <class T, typename std::enable_if<!std::is_copy_constructible<T>::value, int>::type = 0>
-    static void handle_return_value_policy(instance<T> *inst, return_value_policy policy, PyObject *parent) {
-        if (policy == return_value_policy::copy) {
-            throw cast_error("return_value_policy = copy, but the object is non-copyable!");
-        } else if (policy == return_value_policy::reference) {
-            inst->owned = false;
-        } else if (policy == return_value_policy::reference_internal) {
-            inst->owned = false;
-            inst->parent = parent;
-            Py_XINCREF(parent);
-        }
-    }
-
-    operator type*() { return value; }
-    operator type&() { return *value; }
 protected:
-    type *value = nullptr;
     const type_info *typeinfo = nullptr;
+    void *value = nullptr;
     object temp;
 };
 
-#define PYBIND_TYPE_CASTER(type, py_name) \
+/// Generic type caster for objects stored on the heap
+template <typename type> class type_caster : public type_caster_custom {
+public:
+    static descr name() { return typeid(type); }
+
+    type_caster() : type_caster_custom(&typeid(type)) { }
+
+    static PyObject *cast(const type &src, return_value_policy policy, PyObject *parent) {
+        if (policy == return_value_policy::automatic)
+            policy = return_value_policy::copy;
+        return type_caster_custom::cast(&src, policy, parent, &typeid(type), &copy_constructor);
+    }
+
+    static PyObject *cast(const type *src, return_value_policy policy, PyObject *parent) {
+        return type_caster_custom::cast(src, policy, parent, &typeid(type), &copy_constructor);
+    }
+
+    operator type*() { return (type *) value; }
+    operator type&() { return *((type *) value); }
+protected:
+    template <typename T = type, typename std::enable_if<std::is_copy_constructible<T>::value, int>::type = 0>
+    static void *copy_constructor(const void *arg) {
+        return new type(*((const type *)arg));
+    }
+    template <typename T = type, typename std::enable_if<!std::is_copy_constructible<T>::value, int>::type = 0>
+    static void *copy_constructor(const void *) { return nullptr; }
+};
+
+#define PYBIND11_TYPE_CASTER(type, py_name) \
     protected: \
         type value; \
     public: \
@@ -225,7 +229,7 @@ protected:
         operator type*() { return &value; } \
         operator type&() { return value; } \
 
-#define PYBIND_TYPE_CASTER_NUMBER(type, py_type, from_type, to_pytype) \
+#define PYBIND11_TYPE_CASTER_NUMBER(type, py_type, from_type, to_pytype) \
     template <> class type_caster<type> { \
     public: \
         bool load(PyObject *src, bool) { \
@@ -244,7 +248,7 @@ protected:
         static PyObject *cast(type src, return_value_policy /* policy */, PyObject * /* parent */) { \
             return to_pytype((py_type) src); \
         } \
-        PYBIND_TYPE_CASTER(type, #type); \
+        PYBIND11_TYPE_CASTER(type, #type); \
     };
 
 #if PY_MAJOR_VERSION >= 3
@@ -266,27 +270,29 @@ inline unsigned PY_LONG_LONG PyLong_AsUnsignedLongLong_Fixed(PyObject *o) {
 }
 #endif
 
-PYBIND_TYPE_CASTER_NUMBER(int8_t, long, PyLong_AsLong, PyLong_FromLong)
-PYBIND_TYPE_CASTER_NUMBER(uint8_t, unsigned long, PyLong_AsUnsignedLong, PyLong_FromUnsignedLong)
-PYBIND_TYPE_CASTER_NUMBER(int16_t, long, PyLong_AsLong, PyLong_FromLong)
-PYBIND_TYPE_CASTER_NUMBER(uint16_t, unsigned long, PyLong_AsUnsignedLong, PyLong_FromUnsignedLong)
-PYBIND_TYPE_CASTER_NUMBER(int32_t, long, PyLong_AsLong, PyLong_FromLong)
-PYBIND_TYPE_CASTER_NUMBER(uint32_t, unsigned long, PyLong_AsUnsignedLong, PyLong_FromUnsignedLong)
-PYBIND_TYPE_CASTER_NUMBER(int64_t, PY_LONG_LONG, PyLong_AsLongLong_Fixed, PyLong_FromLongLong)
-PYBIND_TYPE_CASTER_NUMBER(uint64_t, unsigned PY_LONG_LONG, PyLong_AsUnsignedLongLong_Fixed, PyLong_FromUnsignedLongLong)
+PYBIND11_TYPE_CASTER_NUMBER(int8_t, long, PyLong_AsLong, PyLong_FromLong)
+PYBIND11_TYPE_CASTER_NUMBER(uint8_t, unsigned long, PyLong_AsUnsignedLong, PyLong_FromUnsignedLong)
+PYBIND11_TYPE_CASTER_NUMBER(int16_t, long, PyLong_AsLong, PyLong_FromLong)
+PYBIND11_TYPE_CASTER_NUMBER(uint16_t, unsigned long, PyLong_AsUnsignedLong, PyLong_FromUnsignedLong)
+PYBIND11_TYPE_CASTER_NUMBER(int32_t, long, PyLong_AsLong, PyLong_FromLong)
+PYBIND11_TYPE_CASTER_NUMBER(uint32_t, unsigned long, PyLong_AsUnsignedLong, PyLong_FromUnsignedLong)
+PYBIND11_TYPE_CASTER_NUMBER(int64_t, PY_LONG_LONG, PyLong_AsLongLong_Fixed, PyLong_FromLongLong)
+PYBIND11_TYPE_CASTER_NUMBER(uint64_t, unsigned PY_LONG_LONG, PyLong_AsUnsignedLongLong_Fixed, PyLong_FromUnsignedLongLong)
+PYBIND11_TYPE_CASTER_NUMBER(long long, PY_LONG_LONG, PyLong_AsLongLong_Fixed, PyLong_FromLongLong)
+PYBIND11_TYPE_CASTER_NUMBER(unsigned long long, unsigned PY_LONG_LONG, PyLong_AsUnsignedLongLong_Fixed, PyLong_FromUnsignedLongLong)
 
 #if defined(__APPLE__) // size_t/ssize_t are separate types on Mac OS X
 #if PY_MAJOR_VERSION >= 3
-PYBIND_TYPE_CASTER_NUMBER(ssize_t, Py_ssize_t, PyLong_AsSsize_t, PyLong_FromSsize_t)
-PYBIND_TYPE_CASTER_NUMBER(size_t, size_t, PyLong_AsSize_t, PyLong_FromSize_t)
+PYBIND11_TYPE_CASTER_NUMBER(ssize_t, Py_ssize_t, PyLong_AsSsize_t, PyLong_FromSsize_t)
+PYBIND11_TYPE_CASTER_NUMBER(size_t, size_t, PyLong_AsSize_t, PyLong_FromSize_t)
 #else
-PYBIND_TYPE_CASTER_NUMBER(ssize_t, PY_LONG_LONG, PyLong_AsLongLong_Fixed, PyLong_FromLongLong)
-PYBIND_TYPE_CASTER_NUMBER(size_t, unsigned PY_LONG_LONG, PyLong_AsUnsignedLongLong_Fixed, PyLong_FromUnsignedLongLong)
+PYBIND11_TYPE_CASTER_NUMBER(ssize_t, PY_LONG_LONG, PyLong_AsLongLong_Fixed, PyLong_FromLongLong)
+PYBIND11_TYPE_CASTER_NUMBER(size_t, unsigned PY_LONG_LONG, PyLong_AsUnsignedLongLong_Fixed, PyLong_FromUnsignedLongLong)
 #endif
 #endif
 
-PYBIND_TYPE_CASTER_NUMBER(float, double, PyFloat_AsDouble, PyFloat_FromDouble)
-PYBIND_TYPE_CASTER_NUMBER(double, double, PyFloat_AsDouble, PyFloat_FromDouble)
+PYBIND11_TYPE_CASTER_NUMBER(float, double, PyFloat_AsDouble, PyFloat_FromDouble)
+PYBIND11_TYPE_CASTER_NUMBER(double, double, PyFloat_AsDouble, PyFloat_FromDouble)
 
 template <> class type_caster<void_type> {
 public:
@@ -295,7 +301,7 @@ public:
         Py_INCREF(Py_None);
         return Py_None;
     }
-    PYBIND_TYPE_CASTER(void_type, "None");
+    PYBIND11_TYPE_CASTER(void_type, "None");
 };
 
 template <> class type_caster<void> : public type_caster<void_type> {
@@ -313,7 +319,7 @@ public:
         Py_INCREF(result);
         return result;
     }
-    PYBIND_TYPE_CASTER(bool, "bool");
+    PYBIND11_TYPE_CASTER(bool, "bool");
 };
 
 template <> class type_caster<std::string> {
@@ -325,7 +331,7 @@ public:
         object temp(PyUnicode_AsUTF8String(src), false);
         const char *ptr = nullptr;
         if (temp)
-            ptr = PYBIND_AS_STRING(temp.ptr());
+            ptr = PYBIND11_AS_STRING(temp.ptr());
         if (!ptr) { PyErr_Clear(); return false; }
         value = ptr;
         return true;
@@ -333,7 +339,7 @@ public:
     static PyObject *cast(const std::string &src, return_value_policy /* policy */, PyObject * /* parent */) {
         return PyUnicode_FromString(src.c_str());
     }
-    PYBIND_TYPE_CASTER(std::string, "str");
+    PYBIND11_TYPE_CASTER(std::string, "str");
 };
 
 template <> class type_caster<char> {
@@ -345,7 +351,7 @@ public:
         object temp(PyUnicode_AsUTF8String(src), false);
         const char *ptr = nullptr;
         if (temp)
-            ptr = PYBIND_AS_STRING(temp.ptr());
+            ptr = PYBIND11_AS_STRING(temp.ptr());
         if (!ptr) { PyErr_Clear(); return false; }
         value = ptr;
         return true;
@@ -516,7 +522,7 @@ public:
     bool load(PyObject *src, bool convert) {
         if (!parent::load(src, convert))
             return false;
-        holder = holder_type(parent::value);
+        holder = holder_type((type *) parent::value);
         return true;
     }
     explicit operator type*() { return this->value; }
@@ -527,7 +533,7 @@ protected:
     holder_type holder;
 };
 
-#define PYBIND_DECLARE_HOLDER_TYPE(type, holder_type) \
+#define PYBIND11_DECLARE_HOLDER_TYPE(type, holder_type) \
     namespace pybind11 { namespace detail { \
     template <typename type> class type_caster<holder_type> \
         : public type_caster_holder<type, holder_type> { }; \
@@ -543,24 +549,24 @@ public:
         src.inc_ref();
         return (PyObject *) src.ptr();
     }
-    PYBIND_TYPE_CASTER(handle, "handle");
+    PYBIND11_TYPE_CASTER(handle, "handle");
 };
 
-#define PYBIND_TYPE_CASTER_PYTYPE(name) \
+#define PYBIND11_TYPE_CASTER_PYTYPE(name) \
     template <> class type_caster<name> { \
     public: \
         bool load(PyObject *src, bool) { value = name(src, true); return true; } \
         static PyObject *cast(const name &src, return_value_policy /* policy */, PyObject * /* parent */) { \
             src.inc_ref(); return (PyObject *) src.ptr(); \
         } \
-        PYBIND_TYPE_CASTER(name, #name); \
+        PYBIND11_TYPE_CASTER(name, #name); \
     };
 
-PYBIND_TYPE_CASTER_PYTYPE(object)  PYBIND_TYPE_CASTER_PYTYPE(buffer)
-PYBIND_TYPE_CASTER_PYTYPE(capsule) PYBIND_TYPE_CASTER_PYTYPE(dict)
-PYBIND_TYPE_CASTER_PYTYPE(float_)  PYBIND_TYPE_CASTER_PYTYPE(int_)
-PYBIND_TYPE_CASTER_PYTYPE(list)    PYBIND_TYPE_CASTER_PYTYPE(slice)
-PYBIND_TYPE_CASTER_PYTYPE(tuple)   PYBIND_TYPE_CASTER_PYTYPE(function)
+PYBIND11_TYPE_CASTER_PYTYPE(object)  PYBIND11_TYPE_CASTER_PYTYPE(buffer)
+PYBIND11_TYPE_CASTER_PYTYPE(capsule) PYBIND11_TYPE_CASTER_PYTYPE(dict)
+PYBIND11_TYPE_CASTER_PYTYPE(float_)  PYBIND11_TYPE_CASTER_PYTYPE(int_)
+PYBIND11_TYPE_CASTER_PYTYPE(list)    PYBIND11_TYPE_CASTER_PYTYPE(slice)
+PYBIND11_TYPE_CASTER_PYTYPE(tuple)   PYBIND11_TYPE_CASTER_PYTYPE(function)
 
 NAMESPACE_END(detail)
 

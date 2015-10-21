@@ -18,7 +18,7 @@ struct PyArray: public henson::Array
     std::string format;
 };
 
-PYBIND_PLUGIN(pyhenson)
+PYBIND11_PLUGIN(pyhenson)
 {
     py::module m("pyhenson", "Henson bindings");
 

@@ -5,7 +5,7 @@ namespace py = pybind11;
 
 #include "mpi.hpp"
 
-PYBIND_PLUGIN(pympi)
+PYBIND11_PLUGIN(pympi)
 {
     py::module m("pympi", "MPI bindings");
 
