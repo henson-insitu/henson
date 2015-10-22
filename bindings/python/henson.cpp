@@ -86,12 +86,12 @@ PYBIND11_PLUGIN(pyhenson)
                                     return py::float_(nm.get<Value<double>>(name)->value);
                                 else if (format == "i")
                                     return py::int_(nm.get<Value<int>>(name)->value);
-                                //else if (format == "I")
-                                //    return py::int_(nm.get<Value<uint32_t>>(name)->value);
-                                //else if (format == "q")
-                                //    return py::int_(nm.get<Value<int64_t>>(name)->value);
+                                else if (format == "I")
+                                    return py::int_(nm.get<Value<uint32_t>>(name)->value);
+                                else if (format == "q")
+                                    return py::int_(nm.get<Value<int64_t>>(name)->value);
                                 else if (format == "Q")
-                                    return py::int_(nm.get<Value<size_t>>(name)->value);
+                                    return py::int_(nm.get<Value<uint64_t>>(name)->value);
                                 else
                                     throw py::cast_error("Unkown format: " + format);
                             })
