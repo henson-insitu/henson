@@ -1,6 +1,8 @@
-#set                         (Python_ADDITIONAL_VERSIONS 3.4 3.5 3.6)
-find_package                (PythonLibs REQUIRED)
-find_package                (PythonInterp REQUIRED)
+# Add a CMake parameter for choosing a desired Python version
+set                         (HENSON_PYTHON_VERSION "" CACHE STRING "Python version to use for compiling henson module")
+
+find_package                (PythonLibs   ${HENSON_PYTHON_VERSION} REQUIRED)
+find_package                (PythonInterp ${HENSON_PYTHON_VERSION} REQUIRED)
 
 include_directories         (${PYTHON_INCLUDE_DIR} include)
 
