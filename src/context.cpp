@@ -1,12 +1,12 @@
 #include <henson/context.h>
 #include <henson/procs.hpp>
 
-#include <boost/context/fcontext.hpp>
+#include <coro.h>
 
-typedef     boost::context::fcontext_t      fcontext_t;
+typedef     coro_context      context_t;
 
-static fcontext_t* parent = 0;
-static fcontext_t* local  = 0;
+static context_t* parent = 0;
+static context_t* local  = 0;
 
 static henson::ProcMap* procmap = 0;
 
@@ -21,13 +21,13 @@ void henson_yield()
 {
     if (parent == 0 || local == 0)      // not running under henson; do nothing
         return;
-    boost::context::jump_fcontext(local, *parent, 0);
+    coro_transfer(local, parent);
 }
 
 void henson_set_contexts(void* p, void* l)
 {
-    parent = (fcontext_t*) p;
-    local  = (fcontext_t*) l;
+    parent = (context_t*) p;
+    local  = (context_t*) l;
 }
 
 void henson_set_procmap(void* pm)

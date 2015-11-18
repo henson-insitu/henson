@@ -11,7 +11,7 @@
 #include <dlfcn.h>
 
 #include <mpi.h>
-#include <boost/context/all.hpp>
+#include <coro.h>
 
 #include <format.h>
 #include <henson/data.hpp>
@@ -20,10 +20,10 @@
 
 namespace henson
 {
-namespace bc = boost::context;
 
 struct Puppet
 {
+    typedef             coro_context        context_t;
     typedef             int  (*MainType)(int argc, char *argv[]);
     typedef             void (*SetContextType)(void* parent, void* local);
     typedef             void (*SetWorldType)(MPI_Comm world);
@@ -60,11 +60,12 @@ struct Puppet
                                 fmt::print(std::cerr, "Reasonable only if {} doesn't need to exchange any data\n", filename_);
                             }
 
-                            stack_ = allocator_.allocate();
-                            to_ = bc::make_fcontext(stack_.sp, stack_.size, exec);
+                            coro_stack_alloc(&stack_, 8*1024*1024);     // 8MB stack
+                            coro_create(&to_, exec, this, stack_.sptr, stack_.ssze);
+                            coro_create(&from_, NULL, NULL, NULL, 0);
                         }
 
-                        ~Puppet()               { for (char* a : argv_) delete[] a; allocator_.deallocate(stack_); }
+                        ~Puppet()               { for (char* a : argv_) delete[] a; coro_stack_free(&stack_); }
 
     // can't even move a puppet since the addresses of its from_ and to_ fields
     // are stored in the modules (saved via henson_set_context, in the constructor above)
@@ -74,8 +75,8 @@ struct Puppet
     Puppet&             operator=(const Puppet&)=delete;
     Puppet&             operator=(Puppet&&)     =delete;
 
-    void                proceed()               { start_time_ = get_time(); bc::jump_fcontext(&from_, to_, (intptr_t) this); time_type diff = get_time() - start_time_; total_time_ += diff; }
-    void                yield()                 { bc::jump_fcontext(&to_, from_, 0); }
+    void                proceed()               { start_time_ = get_time(); coro_transfer(&from_, &to_); time_type diff = get_time() - start_time_; total_time_ += diff; }
+    void                yield()                 { coro_transfer(&to_, &from_); }
 
     void                signal_stop()           { stop_ = 1; }
 
@@ -84,11 +85,11 @@ struct Puppet
 
     time_type           total_time() const      { return total_time_; }
 
-    static void         exec(intptr_t self_)
+    static void         exec(void* arg)
     {
         while(true)
         {
-            Puppet* self = (Puppet*) self_;
+            Puppet* self = (Puppet*) arg;
             self->running_ = true;
             self->start_time_ = get_time();
             self->result_ = self->main_(self->argc_,&self->argv_[0]);
@@ -109,12 +110,10 @@ struct Puppet
     std::string         filename_;
     int                 argc_;
     std::vector<char*>  argv_;
-    bc::stack_context   stack_;
-    bc::fixedsize_stack allocator_;
-    //bc::protected_fixedsize_stack allocator_;
+    coro_stack          stack_;
 
     MainType            main_;
-    bc::fcontext_t      from_, to_;
+    context_t           from_, to_;
     bool                running_;
     int                 stop_ = 0;
     int                 result_ = -1;

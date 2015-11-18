@@ -8,11 +8,6 @@ endif                       (NOT CMAKE_BUILD_TYPE)
 
 set                         (CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Boost
-find_package                (Boost COMPONENTS context)
-include_directories         (SYSTEM ${Boost_INCLUDE_DIR})
-
-
 # MPI
 find_package                (MPI REQUIRED)
 set                         (mpi_libraries              ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
@@ -30,11 +25,17 @@ include_directories         (${CMAKE_CURRENT_BINARY_DIR}
 # Format
 add_library                 (format    src/format.cc)
 
+# Libcoro
+add_library                 (libcoro   src/coro.c)
+
+add_definitions             (-DCORO_SJLJ)
+
 add_library                 (henson_lib src/context.cpp src/data.cpp)
+target_link_libraries       (henson_lib libcoro)
 set_target_properties       (henson_lib PROPERTIES OUTPUT_NAME henson)
 
 add_executable              (henson henson.cpp)
-target_link_libraries       (henson format ${libraries} ${Boost_CONTEXT_LIBRARY})
+target_link_libraries       (henson format ${libraries} libcoro)
 set_target_properties       (henson PROPERTIES COMPILE_FLAGS "-std=c++11")
 
 add_subdirectory            (examples/simple)
