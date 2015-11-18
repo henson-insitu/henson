@@ -22,21 +22,26 @@ include_directories         (${CMAKE_CURRENT_BINARY_DIR}
                              SYSTEM ${Boost_INCLUDE_DIR}
                              SYSTEM ${MPI_INCLUDE_PATH})
 
+set                         (CORO_TYPE "-DCORO_SJLJ")
+if                          (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    set                     (CORO_TYPE "-DCORO_ASM")
+endif()
+
 # Format
 add_library                 (format    src/format.cc)
 
 # Libcoro
 add_library                 (libcoro   src/coro.c)
-
-add_definitions             (-DCORO_SJLJ)
+set_target_properties       (libcoro PROPERTIES COMPILE_FLAGS ${CORO_TYPE})
 
 add_library                 (henson_lib src/context.cpp src/data.cpp)
 target_link_libraries       (henson_lib libcoro)
 set_target_properties       (henson_lib PROPERTIES OUTPUT_NAME henson)
+set_target_properties       (henson_lib PROPERTIES COMPILE_FLAGS ${CORO_TYPE})
 
 add_executable              (henson henson.cpp)
 target_link_libraries       (henson format ${libraries} libcoro)
-set_target_properties       (henson PROPERTIES COMPILE_FLAGS "-std=c++11")
+set_target_properties       (henson PROPERTIES COMPILE_FLAGS "-std=c++11 ${CORO_TYPE}")
 
 add_subdirectory            (examples/simple)
 add_subdirectory            (examples/intercomm)
