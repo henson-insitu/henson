@@ -34,8 +34,7 @@ add_library                 (format    src/format.cc)
 add_library                 (libcoro   src/coro.c)
 set_target_properties       (libcoro PROPERTIES COMPILE_FLAGS ${CORO_TYPE})
 
-add_library                 (henson_lib src/context.cpp src/data.cpp)
-target_link_libraries       (henson_lib libcoro)
+add_library                 (henson_lib src/context.cpp src/data.cpp src/coro.c)
 set_target_properties       (henson_lib PROPERTIES OUTPUT_NAME henson)
 set_target_properties       (henson_lib PROPERTIES COMPILE_FLAGS ${CORO_TYPE})
 
