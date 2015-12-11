@@ -11,6 +11,7 @@
 
 #include "common.h"
 #include <utility>
+#include <type_traits>
 
 NAMESPACE_BEGIN(pybind11)
 
@@ -19,6 +20,7 @@ class object;
 class str;
 class object;
 class dict;
+class iterator;
 namespace detail { class accessor; }
 
 /// Holds a reference to a Python object (no reference counting)
@@ -33,6 +35,8 @@ public:
     void dec_ref() const { Py_XDECREF(m_ptr); }
     int ref_count() const { return (int) Py_REFCNT(m_ptr); }
     handle get_type() { return (PyObject *) Py_TYPE(m_ptr); }
+    inline iterator begin();
+    inline iterator end();
     inline detail::accessor operator[](handle key);
     inline detail::accessor operator[](const char *key);
     inline detail::accessor attr(handle key);
@@ -73,7 +77,36 @@ public:
     }
 };
 
+class iterator : public object {
+public:
+    iterator(PyObject *obj, bool borrowed = false) : object(obj, borrowed) { ++*this; }
+    iterator& operator++() {
+        if (ptr())
+            value = object(PyIter_Next(ptr()), false);
+        return *this;
+    }
+    bool operator==(const iterator &it) const { return *it == **this; }
+    bool operator!=(const iterator &it) const { return *it != **this; }
+    object operator*() { return value; }
+    const object &operator*() const { return value; }
+    bool check() const { return PyIter_Check(ptr()); }
+private:
+    object value;
+};
+
 NAMESPACE_BEGIN(detail)
+inline PyObject *get_function(PyObject *value) {
+    if (value == nullptr)
+        return nullptr;
+#if PY_MAJOR_VERSION >= 3
+    if (PyInstanceMethod_Check(value))
+        value = PyInstanceMethod_GET_FUNCTION(value);
+#endif
+    if (PyMethod_Check(value))
+        value = PyMethod_GET_FUNCTION(value);
+    return value;
+}
+
 class accessor {
 public:
     accessor(PyObject *obj, PyObject *key, bool attr)
@@ -159,18 +192,6 @@ private:
     size_t index;
 };
 
-class list_iterator {
-public:
-    list_iterator(PyObject *list, ssize_t pos) : list(list), pos(pos) { }
-    list_iterator& operator++() { ++pos; return *this; }
-    object operator*() { return object(PyList_GetItem(list, pos), true); }
-    bool operator==(const list_iterator &it) const { return it.pos == pos; }
-    bool operator!=(const list_iterator &it) const { return it.pos != pos; }
-private:
-    PyObject *list;
-    ssize_t pos;
-};
-
 struct dict_iterator {
 public:
     dict_iterator(PyObject *dict = nullptr, ssize_t pos = -1) : dict(dict), pos(pos) { }
@@ -188,12 +209,34 @@ private:
     PyObject *dict, *key, *value;
     ssize_t pos = 0;
 };
+
+#if PY_MAJOR_VERSION >= 3
+using ::PyLong_AsUnsignedLongLong;
+using ::PyLong_AsLongLong;
+#else
+inline long long PyLong_AsLongLong(PyObject *o) {
+    if (PyInt_Check(o)) /// workaround: PyLong_AsLongLong doesn't accept 'int' on Python 2.x
+        return (long long) PyLong_AsLong(o);
+    else
+        return ::PyLong_AsLongLong(o);
+}
+
+inline unsigned long long PyLong_AsUnsignedLongLong(PyObject *o) {
+    if (PyInt_Check(o)) /// workaround: PyLong_AsUnsignedLongLong doesn't accept 'int' on Python 2.x
+        return (unsigned long long) PyLong_AsUnsignedLong(o);
+    else
+        return ::PyLong_AsUnsignedLongLong(o);
+}
+#endif
+
 NAMESPACE_END(detail)
 
 inline detail::accessor handle::operator[](handle key) { return detail::accessor(ptr(), key.ptr(), false); }
 inline detail::accessor handle::operator[](const char *key) { return detail::accessor(ptr(), key, false); }
 inline detail::accessor handle::attr(handle key) { return detail::accessor(ptr(), key.ptr(), true); }
 inline detail::accessor handle::attr(const char *key) { return detail::accessor(ptr(), key, true); }
+inline iterator handle::begin() { return iterator(PyObject_GetIter(ptr())); }
+inline iterator handle::end() { return iterator(nullptr); }
 
 #define PYBIND11_OBJECT_CVT(Name, Parent, CheckFun, CvtStmt) \
     Name(const handle &h, bool borrowed) : Parent(h, borrowed) { CvtStmt; } \
@@ -242,21 +285,44 @@ inline pybind11::str handle::str() const {
 class bool_ : public object {
 public:
     PYBIND11_OBJECT_DEFAULT(bool_, object, PyBool_Check)
+    bool_(bool value) : object(value ? Py_True : Py_False, true) { }
     operator bool() const { return m_ptr && PyLong_AsLong(m_ptr) != 0; }
 };
 
 class int_ : public object {
 public:
     PYBIND11_OBJECT_DEFAULT(int_, object, PyLong_Check)
-    int_(int value) : object(PyLong_FromLong((long) value), false) { }
-    int_(size_t value) : object(PyLong_FromSize_t(value), false) { }
-#if !(defined(WIN32) || defined(__i386__)) || defined(_WIN64)
-    int_(ssize_t value) : object(PyLong_FromSsize_t(value), false) { }
-#endif
-    int_(unsigned value) : object(PyLong_FromUnsignedLong((unsigned long) value), false) { }
-    int_(long long value) : object(PyLong_FromLongLong(value), false) { }
-    int_(unsigned long long value) : object(PyLong_FromUnsignedLongLong(value), false) { }
-    operator int() const { return (int) PyLong_AsLong(m_ptr); }
+    template <typename T,
+              typename std::enable_if<std::is_integral<T>::value, int>::type = 0>
+    int_(T value) {
+        if (sizeof(T) <= sizeof(long)) {
+            if (std::is_signed<T>::value)
+                m_ptr = PyLong_FromLong((long) value);
+            else
+                m_ptr = PyLong_FromUnsignedLong((unsigned long) value);
+        } else {
+            if (std::is_signed<T>::value)
+                m_ptr = PyLong_FromLongLong((long long) value);
+            else
+                m_ptr = PyLong_FromUnsignedLongLong((unsigned long long) value);
+        }
+    }
+
+    template <typename T,
+              typename std::enable_if<std::is_integral<T>::value, int>::type = 0>
+    operator T() const {
+        if (sizeof(T) <= sizeof(long)) {
+            if (std::is_signed<T>::value)
+                return (T) PyLong_AsLong(m_ptr);
+            else
+                return (T) PyLong_AsUnsignedLong(m_ptr);
+        } else {
+            if (std::is_signed<T>::value)
+                return (T) detail::PyLong_AsLongLong(m_ptr);
+            else
+                return (T) detail::PyLong_AsUnsignedLongLong(m_ptr);
+        }
+    }
 };
 
 class float_ : public object {
@@ -313,6 +379,7 @@ public:
     size_t size() const { return (size_t) PyDict_Size(m_ptr); }
     detail::dict_iterator begin() { return (++detail::dict_iterator(ptr(), 0)); }
     detail::dict_iterator end() { return detail::dict_iterator(); }
+    void clear() { PyDict_Clear(ptr()); }
 };
 
 class list : public object {
@@ -320,10 +387,17 @@ public:
     PYBIND11_OBJECT(list, object, PyList_Check)
     list(size_t size = 0) : object(PyList_New((ssize_t) size), false) { }
     size_t size() const { return (size_t) PyList_Size(m_ptr); }
-    detail::list_iterator begin() { return detail::list_iterator(ptr(), 0); }
-    detail::list_iterator end() { return detail::list_iterator(ptr(), (ssize_t) size()); }
     detail::list_accessor operator[](size_t index) { return detail::list_accessor(ptr(), index); }
     void append(const object &object) { PyList_Append(m_ptr, (PyObject *) object.ptr()); }
+};
+
+class set : public object {
+public:
+    PYBIND11_OBJECT(set, object, PySet_Check)
+    set() : object(PySet_New(nullptr), false) { }
+    size_t size() const { return (size_t) PySet_Size(m_ptr); }
+    void add(const object &object) { PySet_Add(m_ptr, (PyObject *) object.ptr()); }
+    void clear() { PySet_Clear(ptr()); }
 };
 
 class function : public object {
@@ -331,16 +405,8 @@ public:
     PYBIND11_OBJECT_DEFAULT(function, object, PyFunction_Check)
 
     bool is_cpp_function() {
-        PyObject *ptr = m_ptr;
-        if (ptr == nullptr)
-            return false;
-#if PY_MAJOR_VERSION >= 3
-        if (PyInstanceMethod_Check(ptr))
-            ptr = PyInstanceMethod_GET_FUNCTION(ptr);
-#endif
-        if (PyMethod_Check(ptr))
-            ptr = PyMethod_GET_FUNCTION(ptr);
-        return PyCFunction_Check(ptr);
+        PyObject *ptr = detail::get_function(m_ptr);
+        return ptr != nullptr && PyCFunction_Check(ptr);
     }
 };
 
