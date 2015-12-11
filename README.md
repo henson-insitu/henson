@@ -78,8 +78,6 @@ other and resume where they left off when the execution returns.
 
 A convenient way to support such a cooperative multitasking regime is via
 [coroutines](https://en.wikipedia.org/wiki/Coroutine).
-We implement this approach using
-[Boost.Context library](http://www.boost.org/doc/libs/1_58_0/libs/context/doc/html/index.html).
 Executables call `henson_yield()` when they want to relinquish control back to
 `henson`. When not running under `henson`, this
 routine does nothing and returns immediately.
@@ -272,9 +270,9 @@ message when this happens.
 
 ## Compiling and Linking
 
-Henson depends on [Boost](http://www.boost.org) `>=1.58`, specifically, the
-Boost.Context library, responsible for switching contexts between the
-coroutines.
+Henson optionally depends on [Boost](http://www.boost.org) `>=1.58`,
+specifically, the Boost.Context library, responsible for switching contexts
+between the coroutines. Without it, Henson uses `libcoro` that's included in the source.
 
 You can build Henson library, executable, and examples using CMake:
 ```

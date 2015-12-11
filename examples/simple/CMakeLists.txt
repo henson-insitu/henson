@@ -1,8 +1,8 @@
 add_executable              (simulation simulation.c)
-target_link_libraries       (simulation henson_lib ${mpi_libraries} ${Boost_CONTEXT_LIBRARY})
+target_link_libraries       (simulation henson_lib ${mpi_libraries})
 
 add_executable              (analysis analysis.cpp)
-target_link_libraries       (analysis henson_lib ${mpi_libraries} ${Boost_CONTEXT_LIBRARY})
+target_link_libraries       (analysis henson_lib ${mpi_libraries})
 
 if                          (NOT APPLE)
    set                      (linker_flags "-pie -Wl,--export-dynamic")
