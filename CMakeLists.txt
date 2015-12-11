@@ -19,7 +19,6 @@ set                         (libraries ${libraries} ${CMAKE_DL_LIBS})
 include_directories         (${CMAKE_CURRENT_BINARY_DIR}
                              ${CMAKE_CURRENT_SOURCE_DIR}
                              ${CMAKE_CURRENT_SOURCE_DIR}/include
-                             SYSTEM ${Boost_INCLUDE_DIR}
                              SYSTEM ${MPI_INCLUDE_PATH})
 
 set                         (CORO_TYPE "-DCORO_SJLJ")
