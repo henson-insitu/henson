@@ -1,12 +1,12 @@
-import pympi
 import pyhenson as h
 import numpy as np
+from mpi4py import MPI
 
-# Temporary hack, until we can interface properly with mpi4py
-w = pympi.communicator()
-print w.rank(), w.size()
+w = MPI.COMM_WORLD
+print w.rank, w.size
 
-pm = h.ProcMap(w, [('world', w.size())])
+a = MPI._addressof(w)       # required to interface with mpi4py
+pm = h.ProcMap(a, [('world', w.size)])
 nm = h.NameMap()
 
 sim = h.Puppet('../../examples/simple/simulation', ['1250'], pm, nm)
@@ -17,7 +17,7 @@ ana.proceed()
 while sim.running():
     a = nm.get_array("data", 'f')       # f means, we expect this to be an array of floats
     t = nm.get('t', 'i')
-    print "[%d]: From Python: %d -> %f" % (w.rank(), t, np.sum(a))
+    print "[%d]: From Python: %d -> %f" % (w.rank, t, np.sum(a))
     sim.proceed()
     ana.proceed()
 

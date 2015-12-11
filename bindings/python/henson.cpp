@@ -9,7 +9,7 @@ namespace py = pybind11;
 #include <henson/procs.hpp>
 #include <henson/data.hpp>
 
-#include "mpi.hpp"
+#include <mpi.h>
 
 struct PyArray: public henson::Array
 {
@@ -60,7 +60,11 @@ PYBIND11_PLUGIN(pyhenson)
                             { return "Puppet: " + p.filename_; });
 
     py::class_<ProcMap>(m, "ProcMap")
-        .def(py::init<communicator, ProcMap::Vector>());
+        .def("__init__", [](ProcMap& pm, long comm_, ProcMap::Vector v)
+                         {
+                            MPI_Comm comm = *static_cast<MPI_Comm*>(reinterpret_cast<void*>(comm_));
+                            new (&pm) ProcMap(comm, v);
+                         });
 
     py::class_<PyArray>(m,   "Array")
         .def_buffer([](PyArray& a) -> py::buffer_info

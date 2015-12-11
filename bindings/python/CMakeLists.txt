@@ -10,11 +10,7 @@ add_library                 (pyhenson SHARED henson.cpp)
 target_link_libraries       (pyhenson format ${libraries} ${Boost_CONTEXT_LIBRARY})
 set_target_properties       (pyhenson PROPERTIES COMPILE_FLAGS "-std=c++11")
 
-add_library                 (pympi SHARED mpi.cpp)
-target_link_libraries       (pympi format ${libraries})
-set_target_properties       (pympi PROPERTIES COMPILE_FLAGS "-std=c++11")
-
-foreach                     (m pyhenson pympi)
+foreach                     (m pyhenson)
 set_target_properties       (${m} PROPERTIES PREFIX "")
 set_target_properties       (${m} PROPERTIES SUFFIX ".so")
 
