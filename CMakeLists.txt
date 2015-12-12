@@ -2,6 +2,7 @@ project                     (Henson)
 cmake_minimum_required      (VERSION 2.8.11)
 
 option                      (use_boost          "Use Boost.Context"              OFF)
+option                      (python             "Build Python bindings"          ON)
 
 # Default to Release
 if                          (NOT CMAKE_BUILD_TYPE)
@@ -72,3 +73,7 @@ add_subdirectory            (examples/intercomm)
 add_subdirectory            (examples/async)
 add_subdirectory            (examples/fair)
 add_subdirectory            (tools)
+
+if                          (python)
+    add_subdirectory        (bindings/python)
+endif                       (python)
