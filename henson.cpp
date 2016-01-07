@@ -9,6 +9,9 @@
 
 #include <opts/opts.h>
 #include <format.h>
+#include <spdlog/spdlog.h>
+namespace spd = spdlog;
+std::shared_ptr<spd::logger> logger;
 
 #include <henson/puppet.hpp>
 #include <henson/data.hpp>
@@ -108,15 +111,15 @@ struct Executor
     {
         if (stop)
         {
-            if (verbose) fmt::print("Sending stop to {}\n", name);
+            logger->debug("Sending stop to {}", name);
             puppet.signal_stop();
         }
-        if (verbose) fmt::print("Proceeding with {}\n", name);
+        logger->debug("Proceeding with {}", name);
         puppet.proceed();
 
         if (!puppet.running() && control.control == name)
         {
-            if (verbose) fmt::print("Control puppet {} stopped in {}\n", name, control.name);
+            logger->debug("Control puppet {} stopped in {}", name, control.name);
             stop = true;
         }
     }
@@ -142,11 +145,22 @@ int main(int argc, char *argv[])
     MPI_Comm_size(world, &size);
 
     std::vector<std::string>    procs_sizes;
+    std::string                 log_level = "info";
     using namespace opts;
     Options ops(argc, argv);
     ops
         >> Option('p', "procs", procs_sizes, "number of processors to use for a control group")
+        >> Option('l', "log",   log_level,   "log level to use")
     ;
+
+    logger = spd::stderr_logger_st("console");
+    int lvl;
+    for (lvl = spd::level::trace; lvl < spd::level::off; ++lvl)
+        if (spd::level::level_names[lvl] == log_level)
+            break;
+    logger->set_level(static_cast<spd::level::level_enum>(lvl));
+
+    logger->set_pattern(fmt::format("[{}]: [%Y-%m-%d %H:%M:%S.%e] [%l] %v", rank));
 
     bool show_sizes = ops >> Present('s', "show-sizes", "show group sizes");
     bool verbose    = ops >> Present('v', "verbose",    "verbose output");
@@ -154,7 +168,7 @@ int main(int argc, char *argv[])
     bool every_iteration = ops >> Present("every-iteration", "report times at every iteration");
 
     if (verbose || rank == 0)
-        fmt::print("[{}]: henson started; total processes = {}\n", rank, size);
+        logger->info("henson started; total processes = {}", size);
 
     std::string script_fn;
     if (  ops >> Present('h', "help", "show help") ||
@@ -182,7 +196,7 @@ int main(int argc, char *argv[])
     bool result = hwl::script(ps, script);
     if (!result)
     {
-        fmt::print("Couldn't parse script: {}\n", script_fn);
+        logger->error("Couldn't parse script: {}", script_fn);
         return 1;
     }
 
@@ -194,7 +208,7 @@ int main(int argc, char *argv[])
         int eq_pos = procs_size.find('=');
         if (eq_pos == std::string::npos)
         {
-            fmt::print("Can't parse {}\n", procs_size);
+            logger->error("Can't parse {}", procs_size);
             return 1;
         }
         int sz = std::stoi(procs_size.substr(eq_pos + 1, procs_size.size() - eq_pos));
@@ -210,7 +224,7 @@ int main(int argc, char *argv[])
         int eq_pos = var.find('=');
         if (eq_pos == std::string::npos)
         {
-            fmt::print("Can't parse {}\n", var);
+            logger->error("Can't parse {}", var);
             return 1;
         }
         auto var_name  = var.substr(0, eq_pos);
@@ -220,7 +234,7 @@ int main(int argc, char *argv[])
 
     if (total_procs > size)
     {
-        fmt::print("Specified procs exceed MPI size: {} > {}\n", total_procs, size);
+        logger->error("Specified procs exceed MPI size: {} > {}", total_procs, size);
         return 1;
     }
 
@@ -243,7 +257,7 @@ int main(int argc, char *argv[])
         procmap = ProcMapUniquePtr(new h::ProcMap(world, procs));
     } catch (std::runtime_error& e)
     {
-        fmt::print("Abort: {}\n", e.what());
+        logger->error("Abort: {}", e.what());
         return 1;
     }
 
@@ -275,18 +289,18 @@ int main(int argc, char *argv[])
         if (!control.uses(p.name)) continue;
 
         // parse and process command variables
-        //fmt::print("Parsing command: {}\n", p.command);
+        logger->trace("Parsing command: {}", p.command);
         hwl::Command cmd;
         std::istringstream command_in(p.command);
         parser::state ps(command_in);
         bool result = hwl::command(ps, cmd);
         if (!result)
         {
-            fmt::print("Couldn't parse command: {}\n", p.command);
+            logger->error("Couldn't parse command: {}", p.command);
             return 1;
         }
         auto cmd_expanded = cmd.generate(variables);
-        //fmt::print("Command parsed and expanded: {}\n", cmd_expanded);
+        logger->trace("Command parsed and expanded: {}", cmd_expanded);
 
         auto cmd_line = CommandLine(cmd_expanded);
         auto exec = cmd_line.executable();
@@ -364,7 +378,7 @@ int main(int argc, char *argv[])
         // revisit the puppets that need to finilize their execution
         for (auto& name : revisit)
         {
-            if (verbose) fmt::print("Revisiting {}\n", name);
+            logger->debug("Revisiting {}", name);
             puppets[name]->proceed();
         }
         revisit.clear();
@@ -376,7 +390,7 @@ int main(int argc, char *argv[])
     } while (!stop_execution);
 
     if (verbose || rank == 0)
-        fmt::print("[{}]: henson done\n", rank);
+        logger->info("henson done");
 
     if (times)
         report_times(iteration);
