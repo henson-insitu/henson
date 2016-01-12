@@ -153,19 +153,21 @@ int main(int argc, char *argv[])
         >> Option('l', "log",   log_level,   "log level to use")
     ;
 
-    logger = spd::stderr_logger_st("console");
-    int lvl;
-    for (lvl = spd::level::trace; lvl < spd::level::off; ++lvl)
-        if (spd::level::level_names[lvl] == log_level)
-            break;
-    logger->set_level(static_cast<spd::level::level_enum>(lvl));
-
-    logger->set_pattern(fmt::format("[{}]: [%Y-%m-%d %H:%M:%S.%e] [%l] %v", rank));
-
     bool show_sizes = ops >> Present('s', "show-sizes", "show group sizes");
     bool verbose    = ops >> Present('v', "verbose",    "verbose output");
     bool times      = ops >> Present('t', "show-times", "show time spent in each puppet");
     bool every_iteration = ops >> Present("every-iteration", "report times at every iteration");
+
+    logger = spd::stderr_logger_st("console");
+    logger->set_level(spd::level::off);
+    int lvl;
+    for (lvl = spd::level::trace; lvl < spd::level::off; ++lvl)
+        if (spd::level::level_names[lvl] == log_level)
+            break;
+    if (verbose || rank == 0)
+        logger->set_level(static_cast<spd::level::level_enum>(lvl));
+
+    logger->set_pattern(fmt::format("[{}]: [%Y-%m-%d %H:%M:%S.%e] [%l] %v", rank));
 
     if (verbose || rank == 0)
         logger->info("henson started; total processes = {}", size);
