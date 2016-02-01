@@ -26,6 +26,10 @@ set                         (libraries ${libraries}     ${mpi_libraries})
 # DL
 set                         (libraries ${libraries} ${CMAKE_DL_LIBS})
 
+# Threads
+find_package                (Threads)
+set                         (libraries ${libraries} ${CMAKE_THREAD_LIBS_INIT})
+
 include_directories         (${CMAKE_CURRENT_BINARY_DIR}
                              ${CMAKE_CURRENT_SOURCE_DIR}
                              ${CMAKE_CURRENT_SOURCE_DIR}/include
