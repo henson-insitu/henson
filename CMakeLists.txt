@@ -3,6 +3,7 @@ cmake_minimum_required      (VERSION 2.8.11)
 
 option                      (use_boost          "Use Boost.Context"              OFF)
 option                      (python             "Build Python bindings"          ON)
+option                      (regenerate-wrapper "Regenerate MPI wrapper"         OFF)
 
 # Default to Release
 if                          (NOT CMAKE_BUILD_TYPE)
@@ -22,6 +23,18 @@ endif()
 find_package                (MPI REQUIRED)
 set                         (mpi_libraries              ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
 set                         (libraries ${libraries}     ${mpi_libraries})
+
+# MPI wrapper
+if                          (regenerate-wrapper)
+    set                     (WRAP ${PROJECT_SOURCE_DIR}/src/wrap.py)
+    include                 (${PROJECT_SOURCE_DIR}/src/WrapConfig.cmake)
+    add_wrapped_file        (restrict-world.c src/restrict-world.w)
+else()
+  add_custom_command        (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/restrict-world.c
+                             COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src/restrict-world.c ${CMAKE_CURRENT_BINARY_DIR}/restrict-world.c
+                             MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/src/restrict-world.c)
+  add_custom_target         (restrict-world.c ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/restrict-world.c)
+endif()
 
 # DL
 set                         (libraries ${libraries} ${CMAKE_DL_LIBS})
@@ -51,7 +64,7 @@ endif()
 # Format
 add_library                 (format    src/format.cc)
 
-set                         (HENSON_LIB_SOURCES src/context.cpp src/data.cpp ${HENSON_LIB_SOURCES})
+set                         (HENSON_LIB_SOURCES src/context.cpp src/data.cpp restrict-world.c ${HENSON_LIB_SOURCES})
 add_library                 (henson_lib ${HENSON_LIB_SOURCES})
 set_target_properties       (henson_lib PROPERTIES OUTPUT_NAME henson)
 if                          (use_boost)

@@ -18,7 +18,7 @@ class ProcMap
 
     public:
                     ProcMap(MPI_Comm world, const Vector& procs):
-                        world_(world), color_(0)
+                        world_(world), color_(0), disable_local_(false)
         {
             int rank, size;
             MPI_Comm_rank(world, &rank);
@@ -45,7 +45,7 @@ class ProcMap
         }
 
         MPI_Comm    world() const                                           { return world_; }
-        MPI_Comm    local() const                                           { return local_; }
+        MPI_Comm    local() const                                           { if (!disable_local_) return local_; else return world_; }
         int         color() const                                           { return color_; }
         int         leader(const std::string& name) const                   { return leaders_.find(name)->second; }
         int         size(const std::string& name) const                     { return procs_.find(name)->second; }
@@ -62,7 +62,12 @@ class ProcMap
                 return it->second;
 
             MPI_Comm comm;
+            // a hack to avoid using PMPI_Intercomm_create directly;
+            // inside MPI_Init_thread, local() gets called to get the "world" communicator;
+            // in this case, we need to provide the honest world_
+            disable_local_ = true;
             MPI_Intercomm_create(local_, 0, world(), leaders_.find(to)->second, tag, &comm);
+            disable_local_ = false;
             intercomm_cache_[to] = comm;
             return comm;
         }
@@ -73,6 +78,8 @@ class ProcMap
         Map                 leaders_;       // stores the ranks of the "root" processes in the subcommunicators (used for creating intercomms)
         int                 color_;
 
+        // NB: this makes ProcMap not thread safe
+        mutable bool            disable_local_;
         mutable IntercommCache  intercomm_cache_;
 };
 

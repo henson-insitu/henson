@@ -31,7 +31,7 @@ int main(int argc, char** argv)
         fmt::print("{} should run under henson\n", argv[0]);
         return 1;
     }
-    MPI_Comm world = henson_get_world();
+    MPI_Comm world = MPI_COMM_WORLD;
     int rank;
     MPI_Comm_rank(world, &rank);
 
