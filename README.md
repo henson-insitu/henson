@@ -2,16 +2,17 @@
 
 ## Contents
 
-  * [Example](#markdown-header-example)
-  * [Problem and Solution](#markdown-header-problem-and-solution)
-  * [Code](#markdown-header-code)
-    - [Headers](#markdown-header-headers)
-    - [MPI Initialization](#markdown-header-mpi-initialization)
-    - [Control Transfer](#markdown-header-control-transfer)
-    - [Data Exchange](#markdown-header-data-exchange)
+  * [Example][]
+  * [Motivation][]
+  * [Code][]
+    - [Headers][]
+    - [MPI][]
+    - [Control Transfer][]
+    - [Data Exchange][]
     - [Execution Groups][]
   * [HWL][]
-  * [Compiling and Linking](#markdown-header-compiling-and-linking)
+  * [Henson Invocation][]
+  * [Compiling and Linking][]
 
 [Execution Groups]:   #markdown-header-execution-groups
 [HWL]:                #markdown-header-hwl
@@ -41,20 +42,16 @@ Other examples:
   * [examples/intercomm](examples/intercomm) illustrates multiple execution groups;
   * [examples/async](examples/async) does the same, but with asynchronous data exchange.
 
-## Problem and Solution
+## Motivation
 
-**Original problem.**
-Running under a regular Linux OS, one can launch simulation and analysis as
-separate processes and use inter-process communication to synchronize execution.
-But this approach does not work on supercomputers. Both Edison at NERSC and
-Mira at ALCF (and likely all Crays and IBM BGs) prohibit users from launching
-multiple executables on a single node.  Furthermore, both prevent a process from
-launching child processes. The standard `fork`/`exec` pattern does not
-work: on a Cray, a process can `fork`, but a child that tries to `exec` a
-different executable gets killed; on a BG/Q, even the `fork` is disabled.
+We would like analysis codes to access simulation data, while the
+simulation is running, without saving the data to disk. The goal is to let
+multiple independent executable share memory (e.g., exchange arrays without
+copying their contents) without modifying their memory management systems. We
+would also like to control the execution flow, for example, switching between
+simulation and analysis after every step of the simulation.
 
-**Proposed solution.**
-A convenient solution was [suggested on StackOverflow](http://stackoverflow.com/a/30036251/44738).
+**Shared address space.**
 If the executables are built as position-independent code, then their `main`s
 can be loaded using the [dynamic loading](https://en.wikipedia.org/wiki/Dynamic_loading) facilities `dlopen` and `dlsym`:
 
@@ -64,9 +61,11 @@ typedef     int  (*MainType)(int argc, char *argv[]);
 void*       lib      = dlopen(fn.c_str(), RTLD_LAZY);
 MainType    lib_main = (MainType) dlsym(lib, "main");
 ```
-
 The `main`s can subsequently be called from a controlling process in the
-appropriate order.
+appropriate order. Since all the executables get loaded into the same address
+space, the data can be exchanged between them by simply passing pointers around
+— no copying or special tricks are required. (Achieving the same zero-copy
+between separate processes is much more complicated.)
 
 **Coroutines.**
 How can we transfer control between different `main`s?
@@ -81,13 +80,6 @@ A convenient way to support such a cooperative multitasking regime is via
 Executables call `henson_yield()` when they want to relinquish control back to
 `henson`. When not running under `henson`, this
 routine does nothing and returns immediately.
-
-**Shared address space.**
-The above solution has an unexpected advantage. Since all the routines get
-loaded into the same address space, the data can be exchanged between them
-by simply passing pointers around — no copying or special tricks are
-required. (Achieving the same zero-copy between separate processes is much more
-complicated.)
 
 
 ## Code
@@ -104,26 +96,21 @@ moving data across coroutines.
 #include <henson/data.hpp>      // C++ functions
 ```
 
-### MPI Initialization
+### MPI
 
 Since all executables become part of the main `henson` process, MPI must be
-initialized only once. `henson` takes care of the initialization, so, when
-running under it, coroutines cannot initialize MPI themselves.
-`henson_get_world()` returns the MPI communicator.
-(This communicator may be different from `MPI_COMM_WORLD` if multiple
-[execution groups][Execution Groups] are used.)
+initialized and finalized only once. `henson` takes care of the initialization,
+so, when running under it, coroutines cannot initialize MPI themselves.
+`libhenson`, in the default configuration, includes MPI wrappers (built on
+PMPI interface) that are only active when the puppet is running under `henson`.
+The wrappers disable initialization and finalization. They also replace
+`MPI_COMM_WORLD` by the result of `henson_get_world()`, which returns the MPI
+communicator restricted to the puppet's execution group.
+See [execution groups][Execution Groups] for more details.
 
-```{.c}
-if (!henson_active())
-    MPI_Init(&argc, &argv);
-
-MPI_Comm world = henson_get_world();
-
-...
-
-if (!henson_active())
-    MPI_Finalize();
-```
+If the wrappers are disabled, the user must avoid initialization/finalization
+manually and explicitly request the correct communicator using
+`henson_get_world()`.
 
 ### Control Transfer
 
@@ -144,6 +131,8 @@ helper functions allow exchanging specific types of data:
   * `henson_{save,load}_pointer(name, ptr)`
   * `henson_{save,load}_size_t(name, size)`
   * `henson_{save,load}_int(name, x)`
+  * `henson_{save,load}_float(name, x)`
+  * `henson_{save,load}_double(name, x)`
 
 In C++, there are additional functions:
 
@@ -223,8 +212,11 @@ switches to [analysis.cpp][].
 [receive.cpp]:  tools/receive.cpp
 
 `henson_get_world()` returns the communicator restricted to each execution
-group. To communicate across groups, [send.cpp][] and [receive.cpp][] use
-`henson_get_intercomm(group_name)` to get the appropriate MPI inter-communicator.
+group. In the default configuration, it's not necessary to call this function
+directly because the MPI wrappers built into `henson` will replace any instance
+of `MPI_COMM_WORLD` with the result of this function. To communicate across
+groups, [send.cpp][] and [receive.cpp][] use `henson_get_intercomm(group_name)`
+to get the appropriate MPI inter-communicator.
 
 Section [HWL][] describes how to specify execution groups in the scripts
 supplied to `henson`.
@@ -267,12 +259,36 @@ needs to send it the appropriate message. Accordingly, [send.cpp][] checks wheth
 `producer` group is stopping by calling `henson_stop()`, and sends the stop
 message when this happens.
 
+## Henson Invocation
+
+`henson` accepts the following command-line options. The user can specify on
+the command line how many processors to use for each execution group (`-p`) and
+variable values to use inside HWL scripts.
+
+```
+Usage: ./henson SCRIPT [-p group=SIZE]* [variable=value]*
+
+Execute SCRIPT. procs are the names of execution groups in the script.
+Leftover processors get split evenly among the execution groups in the SCRIPT
+but not specified in the procs list.
+
+Options:
+   -p, --procs SEQUENCE     number of processors to use for a control group [default: ()]
+   -l, --log STRING         log level to use [default: info]
+   -s, --show-sizes         show group sizes
+   -v, --verbose            verbose output
+   -t, --show-times         show time spent in each puppet
+       --every-iteration    report times at every iteration
+   -h, --help               show help
+```
+
 
 ## Compiling and Linking
 
+By default, Henson uses [libcoro](http://software.schmorp.de/pkg/libcoro.html)
+to switch contexts between the coroutines; it's included in the source.
 Henson optionally depends on [Boost](http://www.boost.org) `>=1.58`,
-specifically, the Boost.Context library, responsible for switching contexts
-between the coroutines. Without it, Henson uses `libcoro` that's included in the source.
+specifically, the Boost.Context library, which can be used instead of `libcoro`.
 
 You can build Henson library, executable, and examples using CMake:
 ```
@@ -280,10 +296,17 @@ cmake .../path/to/henson
 make
 ```
 
+CMake accepts the following options:
+
+  - `-Duse_boost=on` to switch from `libcoro` to Boost.Context
+  - `-Dregenerate-wrapper=on` to regenerate MPI wrappers for the specific implementation you are using (requires Python)
+  - `-Dpython=off` to disable building Python bindings
+  - `-Dmpi-wrappers=off` to not include MPI wrappers into `libhenson`
+
 When building your own executables, it's important to pass certain flags to the
 compiler and to the linker. Compiler needs to prepare position-independent code;
 for executables, GCC and Clang need option `-fPIE` to do so.
-(In CMake, this options is added automatically when
+(In CMake, this option is added automatically when
 `CMAKE_POSITION_INDEPENDENT_CODE` is `on`.)
 
 We need to make sure the linker exposes all symbols that `henson` needs. Under
