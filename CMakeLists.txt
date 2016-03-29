@@ -35,7 +35,6 @@ else()
   add_custom_command        (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/restrict-world.c
                              COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src/restrict-world.c ${CMAKE_CURRENT_BINARY_DIR}/restrict-world.c
                              MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/src/restrict-world.c)
-  add_custom_target         (restrict-world.c ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/restrict-world.c)
 endif()
 set                         (MPI_WRAPPER_SOURCES    restrict-world.c)
 endif()

@@ -48,7 +48,7 @@ struct Puppet
                             filename_(fn),
                             argc_(argc), argv_(argc_)
                         {
-                            for (size_t i = 0; i < argc_; ++i)
+                            for (int i = 0; i < argc_; ++i)
                             {
                                 argv_[i] = new char[strlen(argv[i]) + 1];
                                 strcpy(argv_[i], argv[i]);

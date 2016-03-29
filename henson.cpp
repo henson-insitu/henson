@@ -19,6 +19,9 @@ std::shared_ptr<spd::logger> logger;
 #include <henson/hwl.hpp>
 namespace h = henson;
 
+// http://stackoverflow.com/a/1486931/44738
+#define UNUSED(expr) do { (void)(expr); } while (0)
+
 std::string
 clock_to_seconds(h::time_type t)
 {
@@ -40,7 +43,8 @@ struct CommandLine
                                 CommandLine(CommandLine&&)      =default;
                                 CommandLine(const std::string& line)
     {
-        int prev = -1, pos = 0;
+        int prev = -1;
+        size_t pos = 0;
         while (pos != std::string::npos)
         {
             pos = line.find(' ', pos + 1);
@@ -207,7 +211,7 @@ int main(int argc, char *argv[])
     int                             total_procs = 0;
     for (std::string procs_size : procs_sizes)
     {
-        int eq_pos = procs_size.find('=');
+        size_t eq_pos = procs_size.find('=');
         if (eq_pos == std::string::npos)
         {
             logger->error("Can't parse {}", procs_size);
@@ -223,7 +227,7 @@ int main(int argc, char *argv[])
     std::string                         var;
     while (ops >> PosOption(var))
     {
-        int eq_pos = var.find('=');
+        size_t eq_pos = var.find('=');
         if (eq_pos == std::string::npos)
         {
             logger->error("Can't parse {}", var);
@@ -275,7 +279,7 @@ int main(int argc, char *argv[])
 
     int                     color       = procmap->color();
     std::string             group       = procs[color].first;
-    int                     group_size  = procs[color].second;
+    int                     group_size  = procs[color].second; UNUSED(group_size);
     const hwl::ControlFlow& control     = script.procs[group];
 
     // convert script into puppets

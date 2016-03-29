@@ -194,7 +194,7 @@ struct OptionContainer< std::vector<T> >: public BasicOption
         oss << "(";
         if (def.size())
             oss << def[0];
-        for (int i = 1; i < def.size(); ++i)
+        for (size_t i = 1; i < def.size(); ++i)
             oss << ", " << def[i];
         oss << ")";
         return oss.str();

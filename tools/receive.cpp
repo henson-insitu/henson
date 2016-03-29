@@ -11,6 +11,9 @@
 
 #include "common.hpp"
 
+// http://stackoverflow.com/a/1486931/44738
+#define UNUSED(expr) do { (void)(expr); } while (0)
+
 #define READ_TYPE(VARTYPE) \
     if (var.type == #VARTYPE)  \
     {   \
@@ -86,7 +89,6 @@ int main(int argc, char** argv)
 
     while(true)
     {
-        size_t count;
         MPI_Status s;
 
         // request more data
@@ -132,7 +134,7 @@ int main(int argc, char** argv)
         std::vector<std::tuple<size_t, size_t>>     arrays_meta(array_count, std::make_tuple<size_t,size_t>(0,0));        // (count, type)
         for (size_t i = 0; i < ranks.size(); ++i)
         {
-            int     rank      = ranks[i];
+            int     rank      = ranks[i]; UNUSED(rank);
             auto&   buffer    = buffers[i];
             size_t  position  = 0;
             size_t  array_idx = 0;

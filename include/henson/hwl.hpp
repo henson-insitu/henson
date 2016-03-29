@@ -133,7 +133,7 @@ std::string     indent_to_tokens(std::string txt)
         out += line + '\n';
     }
 
-    for (size_t i = 0; i < count; ++i)
+    for (int i = 0; i < count; ++i)
         out += "DEDENT\n";
 
     return out;
