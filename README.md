@@ -2,20 +2,20 @@
 
 ## Contents
 
-  * [Example][]
-  * [Motivation][]
-  * [Code][]
-    - [Headers][]
-    - [MPI][]
-    - [Control Transfer][]
-    - [Data Exchange][]
+  * [Example](#example)
+  * [Motivation](#motivation)
+  * [Code](#code)
+    - [Headers](#headers)
+    - [MPI](#mpi)
+    - [Control Transfer](#control-transfer)
+    - [Data Exchange](#data-exchange)
     - [Execution Groups][]
   * [HWL][]
-  * [Henson Invocation][]
-  * [Compiling and Linking][]
+  * [Henson Invocation](#henson-invocation)
+  * [Compiling and Linking](#compiling-and-linking)
 
-[Execution Groups]:   #markdown-header-execution-groups
-[HWL]:                #markdown-header-hwl
+[Execution Groups]:   #execution-groups
+[HWL]:                #hwl
 
 ## Example
 
