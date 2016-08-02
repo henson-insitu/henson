@@ -395,13 +395,11 @@ int main(int argc, char *argv[])
         ++iteration;
     } while (!stop_execution);
 
-    if (verbose && rank != 0)
+    if (verbose || rank == 0)
         logger->info("henson done");
 
     if (times)
         report_times(iteration);
 
     MPI_Finalize();
-
-    logger->info("henson done");
 }

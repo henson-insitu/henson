@@ -1,7 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <vector>
-#include <iostream>
 #include <unistd.h>
 #include <time.h>
 #include <mpi.h>
@@ -43,7 +41,7 @@ int main(int argc, char** argv)
         if (sleep_interval)
             sleep(sleep_interval);
 
-        float* array = (float *) malloc(n * sizeof(float));
+        float* array = malloc(n * sizeof(float));
         size_t i;
         for (i = 0; i < n; ++i)
             array[i] = (float) rand() / (float) RAND_MAX;
@@ -60,35 +58,11 @@ int main(int argc, char** argv)
             printf("[%d]: Simulation [t=%d]: total_sum = %f\n", rank, t, total_sum);
 
         henson_save_int("t", t);
-
-        std::vector<double> stuff(5, 0);
-        for(int i = 0; i < stuff.size(); ++i)
-        {
-            stuff[i] = i;
-            //std::cout << "Vector value at: " << i << " is: " << stuff[i] << std::endl;
-        }
-        //std::cout << "Void * inside sim is: " << (void *)&stuff << std::endl;
-        henson_save_pointer("testing", (void *)(&stuff));
-
         henson_save_array("data", array, sizeof(float), n, sizeof(float));
         henson_yield();
 
-        /*if(t != 0)
-        {
-            for(int i = 0; i < stuff.size(); ++i)
-            {
-                if(rank == 0)
-                    std::cout << "Vector value after first yield at: " << i << " is: " << stuff[i] << std::endl;
-            }
-        }
-        henson_yield();
-        */
-
         free(array);
     }
-
-
-   // henson_yield();
 
     MPI_Finalize();
 
