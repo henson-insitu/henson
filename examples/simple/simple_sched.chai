@@ -1,0 +1,78 @@
+var sched = Scheduler()
+var procmap = ProcMap()
+
+def world()
+{
+    var procmap = ProcMap()
+    var sim = load("sim", "../simple/simulation", "250", procmap)
+    var ana = load("ana", "../simple/analysis", "", procmap)
+
+    var name_map = NameMap()
+    var local_rank = procmap.get_local_rank()
+
+    sim.proceed()
+
+    while(sim.running())
+    {
+        ana.proceed()
+        sim.proceed()
+
+        /*var test = name_map.get("testing")
+        //print("Got test: " + to_string(test))
+        var test2 := convert_to_vec_double(test)
+
+
+        test2.push_back(3.0)
+        for(var i = 0; i < test2.size(); ++i)
+        {
+            if(rank == 0)
+            {
+                print(to_string(test2[i]))
+            }
+        }
+        */
+        //The test was imperfect, figured it out
+    }
+
+    //Must have this or the program will hang
+    if(local_rank == 0)
+    {
+        return 2.0
+    }
+    else
+    {
+        return;
+    }
+
+
+}
+
+
+var procs = sched.get_size()
+
+if(sched.is_controller())
+{
+
+    for(var i = 0; i < 1; ++i) { sched.schedule_job("first", "world()", ["all" : 0], procs - 1) }
+
+    var k = 0;
+    while(sched.control())
+    {
+        if(k == 10)
+        {
+            break
+        }
+
+        k = k + 1
+    }
+
+    sched.finish()
+}
+else
+{
+    while(sched.is_active()) { sched.listen() }
+
+}
+
+
+

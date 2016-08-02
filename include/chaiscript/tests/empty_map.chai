@@ -1,0 +1,17 @@
+def world(args)
+{
+    print(args)
+    return;
+}
+
+world("-c 3.0 -c 4.0 -c 6.0")
+
+eval("world(\"-c test -c 8.0 -c 6.0\")")
+
+var map_test = Map()
+map_test["second"] = 1.0
+map_test["third"] = [3.0, 1.0, 4.0]
+
+print(to_string(map_test))
+
+

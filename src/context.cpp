@@ -57,6 +57,22 @@ MPI_Comm    henson_get_intercomm(const char* to)
     return procmap->intercomm(to);
 }
 
+MPI_Comm    henson_get_intracomm(const char* to)
+{
+    return procmap->intracomm(to);
+}
+
+MPI_Comm    henson_get_subintercomm(const char* to, MPI_Comm intra_comm, int remote_leader)
+{
+    return procmap->subintercomm(to, intra_comm, remote_leader);
+}
+
+void        henson_destroy_subintercomm(const char* to)
+{
+    procmap->destroy_subintercomm(to);
+}
+
+
 void        henson_set_stop(int* s)
 {
     stop = s;

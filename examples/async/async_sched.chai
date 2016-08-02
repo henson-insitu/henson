@@ -1,0 +1,61 @@
+var sched = Scheduler()
+
+def world()
+{
+    var procmap = ProcMap()
+    
+    if(procmap.isInGroup("producer"))
+    {
+        var sim = load("sim", "../simple/simulation", "250 10 1", procmap)
+        var snd = load("snd", "../../tools/send", "--async consumer t:int data:array", procmap)
+    
+        sim.proceed()
+    
+        while(sim.running())
+        {
+            snd.proceed()
+            sim.proceed()
+        }
+    
+        snd.signal_stop()
+        snd.proceed()
+    
+    }
+    else if(procmap.isInGroup("consumer"))
+    {
+    
+        var rcv = load("rcv", "../../tools/receive", "--async producer t:int data:array", procmap)
+        var ana = load("ana", "../simple/analysis", "3", procmap)
+    
+        rcv.proceed()
+    
+        while(rcv.running())
+        {
+            ana.proceed()
+            rcv.proceed()
+        }
+    
+    }
+    else
+    {
+        print("I'm not part of producer or consumer group!!! Error!")
+    }
+
+}
+var size = sched.get_size()
+var rank = sched.get_global_rank()
+
+
+if(rank == 0)
+{
+    sched.schedule_job("world()", ["producer" : 0, "consumer" : 0], size - 1)
+
+    while(!sched.is_job_queue_empty()) { sched.run_next_job() }
+
+    sched.finish()
+}
+else
+{
+    while(sched.is_active()) { sched.listen() }
+}
+

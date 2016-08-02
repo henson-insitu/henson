@@ -107,7 +107,7 @@ int main(int argc, char** argv)
 
         if (rank == 0)
         {
-            fmt::print("[{}]: send signalling stop\n", rank);
+            //fmt::print("[{}]: send signalling stop\n", rank);
             MPI_Send(0,0,MPI_INT,rank,tags::stop,remote);
         }
 

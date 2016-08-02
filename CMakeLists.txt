@@ -4,7 +4,7 @@ cmake_minimum_required      (VERSION 2.8.11)
 option                      (use_boost          "Use Boost.Context"              OFF)
 option                      (python             "Build Python bindings"          ON)
 option                      (mpi-wrappers       "Include MPI wrappers"           ON)
-option                      (regenerate-wrapper "Regenerate MPI wrapper"         OFF)
+option                      (regenerate-wrapper "Regenerate MPI wrapper"         ON)
 
 # Default to Release
 if                          (NOT CMAKE_BUILD_TYPE)
@@ -64,6 +64,8 @@ if                          (NOT use_boost)
     set                     (HENSON_LIB_SOURCES src/coro.c)
 endif()
 
+set                         (CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
+
 # Format
 add_library                 (format    src/format.cc)
 
@@ -76,17 +78,29 @@ else()
     set_target_properties   (henson_lib PROPERTIES COMPILE_FLAGS ${CORO_TYPE})
 endif()
 
-add_executable              (henson henson.cpp)
+add_executable              (henson henson.cpp )
+add_executable              (henson_chai henson_chai.cpp)
 target_link_libraries       (henson format ${libraries})
+target_link_libraries       (henson_chai format ${libraries})
 
 if                          (use_boost)
     target_link_libraries   (henson     ${Boost_CONTEXT_LIBRARY})
     target_link_libraries   (henson_lib ${Boost_CONTEXT_LIBRARY})
-    set_target_properties   (henson PROPERTIES COMPILE_FLAGS "-std=c++11 -DUSE_BOOST")
+    target_link_libraries   (henson_chai     ${Boost_CONTEXT_LIBRARY})
+    set_target_properties   (henson PROPERTIES COMPILE_FLAGS "-DUSE_BOOST")
+    set_target_properties   (henson_chai PROPERTIES COMPILE_FLAGS "-DUSE_BOOST")
 else()
     target_link_libraries   (henson libcoro)
-    set_target_properties   (henson PROPERTIES COMPILE_FLAGS "-std=c++11 ${CORO_TYPE}")
+    set_target_properties   (henson PROPERTIES COMPILE_FLAGS "${CORO_TYPE}")
+    target_link_libraries   (henson_chai libcoro)
+    set_target_properties   (henson_chai PROPERTIES COMPILE_FLAGS "${CORO_TYPE}")
 endif()
+
+
+add_custom_command          (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/examples/run_test.sh
+                             COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/examples/run_test.sh ${CMAKE_CURRENT_BINARY_DIR}/examples/run_test.sh
+                             MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/examples/run_test.sh)
+add_custom_target           (run_test.sh ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/examples/run_test.sh)
 
 add_subdirectory            (examples/simple)
 add_subdirectory            (examples/intercomm)

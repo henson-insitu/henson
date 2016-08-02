@@ -1,0 +1,30 @@
+var procmap = ProcMap()
+
+if(procmap.isInGroup("world"))
+{
+    var sim = load("sim", "../simple/simulation", "250", procmap)
+    var ana = load("ana", "../simple/analysis", "", procmap)
+
+    sim.proceed()
+
+    while(sim.running())
+    {
+        ana.proceed()
+        sim.proceed()
+    }
+
+}
+else
+{
+    print("I don't belong to group world!!")
+}
+
+
+def test_fun(x, y, z)
+{
+    print(to_string(x) + "\t" + to_string(y) + "\t" + to_string(z))
+}
+
+//print("Color: " + to_string(procmap.color()))
+
+//print(3 + 4)

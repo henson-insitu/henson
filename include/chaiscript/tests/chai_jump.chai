@@ -1,0 +1,19 @@
+
+def myFunc(x, y)
+{
+    //+ + test.getTest1()
+    var z = x + y 
+    print("The value of x is: " + to_string(x))
+    print("The value of y is: " + to_string(y))
+    print("The value of z is: " + to_string(z))
+}
+
+
+var test = TestClass()
+
+print("The value of test1 is: " + to_string(test.getTest1()))
+print("The value of test2 is: " + to_string(test.getTest2()))
+
+test.chaiZigZagTest("myFunc(3, 4)")
+
+//test.resetInstance()

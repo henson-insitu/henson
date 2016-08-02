@@ -1,0 +1,39 @@
+var procmap = ProcMap()
+
+if(procmap.isInGroup("producer"))
+{
+    var sim = load("sim", "../simple/simulation", "250", procmap)
+    var snd = load("snd", "../../tools/send", "consumer t:int data:array", procmap)
+
+    sim.proceed()
+
+    while(sim.running())
+    {
+        snd.proceed()
+        sim.proceed()
+    }
+
+    snd.signal_stop()
+    snd.proceed()
+
+}
+else if(procmap.isInGroup("consumer"))
+{
+
+    var rcv = load("rcv", "../../tools/receive", "producer t:int data:array", procmap)
+    var ana = load("ana", "../simple/analysis", "", procmap)
+
+    rcv.proceed()
+
+    while(rcv.running())
+    {
+        ana.proceed()
+        rcv.proceed()
+    }
+
+}
+else
+{
+    print("I'm not part of producer or consumer group!!! Error!")
+}
+

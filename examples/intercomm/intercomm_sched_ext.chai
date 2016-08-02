@@ -1,0 +1,92 @@
+def world()
+{
+    var procmap = ProcMap()
+
+    var sim = load("sim", "../simple/simulation", "250", procmap)
+    var snd = load("snd", "../../tools/send", "consumer t:int data:array", procmap)
+
+    sim.proceed()
+
+    while(sim.running())
+    {
+        snd.proceed()
+        sim.proceed()
+    }
+
+    snd.signal_stop()
+    snd.proceed()
+
+    if(procmap.get_job_rank() == 0)
+    {
+        return 1.0;
+    }
+    else
+    {
+        return;
+    }
+}
+
+
+var proc_map = ProcMap()
+if(proc_map.isInGroup("scheduler"))
+{
+    var sched = Scheduler()
+    var procs = sched.get_size()
+    henson_get_intercomm("consumer")
+
+    if(sched.is_controller())
+    {
+        var number_trials = 1
+        for(var m = 0; m < number_trials; m = m + 1)
+        {
+            sched.schedule_job(to_string(m), "world()", ["all" : 0], 2)
+        }
+
+        var count_coming_in = 0;
+        while(sched.control())
+        {
+            while(!sched.is_stack_empty)
+            {
+                count_coming_in = count_coming_in + 1
+                var next_elem = sched.next_on_stack()
+                sched.pop_stack()
+            }
+
+            if(count_coming_in == number_trials)
+            {
+                break
+            }
+
+
+        }
+
+        sched.finish()
+    }
+    else
+    {
+        while(sched.is_active()) { sched.listen() }
+    }
+
+}
+else if(proc_map.isInGroup("consumer"))
+{
+
+    var rcv = load("rcv", "../../tools/receive_ext", "scheduler t:int data:array", proc_map)
+    var ana = load("ana", "../simple/analysis", "", proc_map)
+
+    rcv.proceed()
+
+    while(rcv.running())
+    {
+        ana.proceed()
+        rcv.proceed()
+    }
+}
+else
+{
+    print("I'm not part of scheduler or consumer group!!! Error!")
+    flush()
+}
+
+
+

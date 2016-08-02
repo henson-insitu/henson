@@ -106,7 +106,7 @@ int main(int argc, char** argv)
 
             if (stop)
             {
-                fmt::print("[{}]: stop signal in receive\n", rank);
+                //fmt::print("[{}]: stop signal in receive\n", rank);
                 MPI_Recv(0, 0, MPI_INT, rank, tags::stop, remote, &s);       // unblock the send
             }
 
