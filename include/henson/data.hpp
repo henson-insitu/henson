@@ -56,7 +56,7 @@ class NameMap
 
         bool        exists(const std::string& name) const               { return values_.find(name) != values_.end(); }
 
-        void        clear()                                             { delete_all(); values_.clear(); }
+        void        clear()                                             { /* delete_all(); */ values_.clear(); }
 
                     ~NameMap()                                          { clear(); }
 

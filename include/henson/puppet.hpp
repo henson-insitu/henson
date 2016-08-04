@@ -47,7 +47,7 @@ struct Puppet
 
                         Puppet(const std::string& fn, int argc, char** argv, ProcMap* procmap, NameMap* namemap):
                             filename_(fn),
-                            argc_(argc), argv_(argc_), running_(false)
+                            argc_(argc), argv_(argc_)
                         {
                             for (int i = 0; i < argc_; ++i)
                             {
@@ -89,19 +89,17 @@ struct Puppet
 #ifdef USE_BOOST
                         ~Puppet()
                         {
-                            //std::cout << "Destroying " << puppet_name_ << std::endl;
                             if(running_)
                             {
                                 signal_stop();
                                 proceed();
                             }
 
-                            //dlclose(lib_);
-
                             for (char* a : argv_)
                                 delete[] a;
                             allocator_.deallocate(stack_);
 
+                            dlclose(lib_);
                         }
     void                proceed()               { start_time_ = get_time(); bc::jump_fcontext(&from_, to_, (intptr_t) this); time_type diff = get_time() - start_time_; total_time_ += diff; }
     void                yield()                 { bc::jump_fcontext(&to_, from_, 0); }
@@ -109,22 +107,17 @@ struct Puppet
 #else
                         ~Puppet()
                         {
-                            //std::cout << "Destroying " << puppet_name_ << std::endl;
                             if(running_)
                             {
-                                //std::cout << "Signal_stoping and proceeding!" << std::endl;
                                 signal_stop();
                                 proceed();
                             }
 
-                            //dlclose(lib_);
-
-                            //std::cout << "About to delete argv_" << std::endl;
                             for (char* a : argv_)
-                                delete[] a; 
-                            //std::cout << "About to free coro_stack" << std::endl;
+                                delete[] a;
                             coro_stack_free(&stack_);
 
+                            dlclose(lib_);
                         }
     void                proceed()               { start_time_ = get_time(); coro_transfer(&from_, &to_); time_type diff = get_time() - start_time_; total_time_ += diff; }
     void                yield()                 { coro_transfer(&to_, &from_); }
@@ -168,10 +161,7 @@ struct Puppet
     {
         T f = (T) dlsym(lib, name);
         if (f == NULL)
-        {
-            std::string temp = "Could not load: " + std::string(name) + " in " + filename_;
             throw std::runtime_error(fmt::format("Could not load {}() in {}\n{}\n", name, filename_, dlerror()));
-        }
         return f;
     }
 
@@ -188,10 +178,10 @@ struct Puppet
 
     MainType            main_;
     context_t           from_, to_;
-    bool                running_;
+    bool                running_ = false;
     int                 stop_ = 0;
     int                 result_ = -1;
-    void *              lib_;
+    void*               lib_;
 
     time_type           start_time_;
     time_type           total_time_ = 0;
