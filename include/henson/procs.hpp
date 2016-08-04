@@ -8,7 +8,8 @@
 #include <stdexcept>
 #include <iostream>
 #include <functional>
-#include "henson/mpi_noncollective_comm.hpp"
+
+#include <henson/mpi-noncollective-comm.h>
 
 namespace henson
 {
@@ -235,7 +236,7 @@ class ProcMap
                 MPI_Group_incl(parent_group, group_array.size(), group_array.data(), &combined_group);
 
                 //Creating the intracomm between adults
-                MY_MPI_Non_collective_comm_create(combined_group, world_, NONCOLLECTIVE_TAG, &newcomm);
+                non_collective_comm_create(combined_group, world_, 77, &newcomm);
                 int remote_rank = 0;
                 int translated_remote_rank = -1;
                 MPI_Group_translate_ranks(remote_group, 1, &remote_rank, combined_group, &translated_remote_rank);

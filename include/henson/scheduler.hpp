@@ -11,10 +11,13 @@
 #include <iostream>
 #include <cstring>
 #include <exception>
-#include <henson/procs.hpp>
+
+#include <mpi.h>
+
 #include <chaiscript/chaiscript.hpp>
 #include <chaiscript/chaiscript_stdlib.hpp>
-#include <mpi.h>
+#include <henson/procs.hpp>
+#include <henson/mpi-noncollective-comm.h>
 
 
 #define INIT_TAG            1
@@ -23,6 +26,7 @@
 #define JOB_FINISHED_TAG    4
 #define SCRIPT_TAG          5
 #define INTERCOMM_FIND_TAG  6
+#define NONCOLLECTIVE_TAG   77
 
 typedef     std::shared_ptr<henson::ProcMap>            ProcMapSharedPtr;
 
@@ -585,7 +589,7 @@ class Scheduler
             int high = first_last_procs[1];
             if(rank_ <= high && rank_ >= low)
             {
-                MY_MPI_Non_collective_comm_create(job_group, world_, NONCOLLECTIVE_TAG, &newcomm);
+                non_collective_comm_create(job_group, world_, NONCOLLECTIVE_TAG, &newcomm);
             }
             else
                 throw std::runtime_error("Error: rank assigned job but not part of job intracreate");
@@ -602,9 +606,20 @@ class Scheduler
             proc_map_->create_child_procmap(group_parsed, first_last_procs, newcomm);
             proc_map_->get_lowest_procmap()->set_job_name(jb_name);
             //proc_map_->set_intercomm_callback(std::bind(&henson::Scheduler::find_remote_rank, this, std::placeholders::_1));
-
         }
 
+        static void create_group(int first, int last, MPI_Comm parent_comm, MPI_Group* new_group)
+        {
+            MPI_Group parent_group;
+
+            MPI_Comm_group(parent_comm, &parent_group);
+
+            std::vector<int> group_array(last - first + 1, -1);
+            for(int i = 0; i < group_array.size(); ++i)
+                group_array[i] = first + i;
+
+            MPI_Group_incl(parent_group, group_array.size(), group_array.data(), new_group);
+        }
 
         MPI_Comm                                            world_;
         int                                                 rank_;
