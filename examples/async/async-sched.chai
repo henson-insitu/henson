@@ -1,0 +1,75 @@
+var sched = Scheduler()
+
+def world(arg)
+{
+    var vals  = arg[0]
+    var iter  = arg[1]
+    var delay = arg[2]
+
+    var procmap = ProcMap()
+    var namemap = NameMap()
+
+    if(procmap.group() == "producer")
+    {
+        var sim = load("../simple/simulation ${vals} ${iter} ${delay}", procmap)
+        var snd = load("../../tools/send --async consumer t:int data:array", procmap)
+
+        sim.proceed()
+
+        while(sim.running())
+        {
+            snd.proceed()
+            sim.proceed()
+        }
+
+        snd.signal_stop()
+        snd.proceed()
+    }
+    else if(procmap.group() == "consumer")
+    {
+
+        var rcv = load("../../tools/receive --async producer t:int data:array", procmap)
+        var ana = load("../simple/analysis 3", procmap)
+
+        rcv.proceed()
+
+        while(rcv.running())
+        {
+            ana.proceed()
+            rcv.proceed()
+        }
+
+        if (procmap.local_rank() == 0)
+        {
+            var sum = namemap.get("sum")
+            print("Final sum: ${sum}")
+            return sum
+        }
+    }
+    else
+    {
+        print("I'm not part of producer or consumer group!!! Error!")
+    }
+}
+
+if(sched.is_controller())
+{
+    for(var m = 0; m < 5; ++m)
+    {
+        sched.schedule("${m}", "world", [250,10,1], ["producer" : 0, "consumer" : 0], sched.workers())
+    }
+
+    while(sched.control()) {}
+    sched.finish()
+
+    while(!sched.results_empty())
+    {
+        var x = sched.pop()
+        print("Got result: ${x}")
+    }
+}
+else
+{
+    sched.listen()
+}
+

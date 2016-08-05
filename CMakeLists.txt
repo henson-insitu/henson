@@ -106,6 +106,7 @@ add_subdirectory            (examples/simple)
 add_subdirectory            (examples/intercomm)
 add_subdirectory            (examples/async)
 add_subdirectory            (examples/fair)
+add_subdirectory            (examples/storage)
 add_subdirectory            (tools)
 
 if                          (python)

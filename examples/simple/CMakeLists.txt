@@ -11,11 +11,11 @@ if                          (NOT APPLE)
    set_target_properties    (analysis   PROPERTIES LINK_FLAGS ${linker_flags})
 endif                       (NOT APPLE)
 
-add_custom_target           (simple.hwl ALL ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/simple.hwl
+add_custom_target           (simple.hwl ALL ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/simple.hwl
                              ${CMAKE_CURRENT_BINARY_DIR}/simple.hwl DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/simple.hwl)
 
-add_custom_target           (simple.chai ALL ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/simple.chai
+add_custom_target           (simple.chai ALL ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/simple.chai
                              ${CMAKE_CURRENT_BINARY_DIR}/simple.chai DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/simple.chai)
 
-add_custom_target           (simple_sched.chai ALL ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/simple_sched.chai
-                             ${CMAKE_CURRENT_BINARY_DIR}/simple_sched.chai DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/simple_sched.chai)
+add_custom_target           (simple-sched.chai ALL ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/simple-sched.chai
+                             ${CMAKE_CURRENT_BINARY_DIR}/simple-sched.chai DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/simple-sched.chai)

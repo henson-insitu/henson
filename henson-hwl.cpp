@@ -99,9 +99,10 @@ int main(int argc, char *argv[])
 {
     h::time_type start_time = h::get_time();
 
-    MPI_Init(&argc, &argv);
+    h::MPIEnvironment mpi_env(&argc, &argv);    // RAII
 
-    MPI_Comm world = MPI_COMM_WORLD;
+    MPI_Comm world;
+    MPI_Comm_dup(MPI_COMM_WORLD, &world);
 
     int rank, size;
     MPI_Comm_rank(world, &rank);
@@ -315,6 +316,4 @@ int main(int argc, char *argv[])
 
     if (times)
         report_times(iteration);
-
-    MPI_Finalize();
 }

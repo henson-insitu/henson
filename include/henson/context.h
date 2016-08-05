@@ -17,8 +17,6 @@ void        henson_set_procmap(void* procmap);
 MPI_Comm    henson_get_world();
 MPI_Comm    henson_get_intercomm(const char* to);
 MPI_Comm    henson_get_intracomm(const char* to);
-MPI_Comm    henson_get_subintercomm(const char* to, MPI_Comm intra_comm, int remote_leader);
-void        henson_destroy_subintercomm(const char* to);
 
 #ifdef __cplusplus
 }

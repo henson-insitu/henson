@@ -1,0 +1,57 @@
+var sched   = Scheduler()
+var procmap = ProcMap()
+
+def world()
+{
+    var procmap = ProcMap()
+    var namemap = NameMap()
+
+    var sim = load("../simple/simulation 250", procmap)
+    var ana = load("../simple/analysis",       procmap)
+
+    sleep(1)    // otherwise we get the same random seed every time
+
+    sim.proceed()
+
+    while(sim.running())
+    {
+        ana.proceed()
+        sim.proceed()
+    }
+
+    // Must return or the program will hang
+    if(procmap.world_rank() == 0)
+    {
+        var sum = namemap.get("sum")
+        print("Final sum: ${sum}")
+        return sum
+    }
+}
+
+
+if(sched.is_controller())
+{
+    for(var i = 0; i < 5; ++i)
+    {
+        sched.schedule("job-${i}", "world", ["all" : 0], sched.workers())
+    }
+
+    while(sched.control())
+    {
+        if (!sched.results_empty())
+        {
+            var x = sched.pop()
+            print("Got result: ${x}")
+        }
+    }
+    while(!sched.results_empty())
+    {
+        var x = sched.pop()
+        print("Got result: ${x}")
+    }
+    sched.finish()
+}
+else
+{
+    sched.listen()
+}

@@ -1,0 +1,52 @@
+var pm = ProcMap()
+
+def compute(arg)
+{
+    var pm = ProcMap()
+    print("Starting compute job ${arg} on rank ${pm.world_rank()}")
+    var comp = load("./compute storage", pm)
+    comp.proceed()
+    if (pm.local_rank() == 0)
+    {
+        var nm = NameMap()
+        var total = nm.get("total")
+        return total
+    }
+}
+
+if (pm.group() == "storage")
+{
+    pm.intercomm("compute")
+
+    var storage = load("./storage compute", pm)
+    storage.proceed()
+} else if (pm.group() == "compute")
+{
+    pm.intercomm("storage")     // it's important to set up the intercomm on the top level
+
+    var scheduler = Scheduler()
+    if (scheduler.is_controller())
+    {
+        for (var i = 0; i < 10; ++i)
+        {
+            scheduler.schedule("${i}", "compute", i, ["compute": 0], 2)
+        }
+        while (scheduler.control()) {}
+        scheduler.finish()
+
+        while(!scheduler.results_empty())
+        {
+            var x = scheduler.pop()
+            print("Got result: ${x}")
+        }
+    } else
+    {
+        scheduler.listen()
+    }
+
+    var stop_storage = load("./storage --stop storage", pm)
+    stop_storage.proceed()
+} else
+{
+    print("No group assigned!")
+}

@@ -6,10 +6,6 @@ add_executable              (receive receive.cpp)
 target_link_libraries       (receive henson_lib format ${mpi_libraries})
 set_target_properties       (receive PROPERTIES COMPILE_FLAGS "-std=c++11")
 
-add_executable              (receive_ext receive_ext.cpp)
-target_link_libraries       (receive_ext henson_lib format ${mpi_libraries})
-set_target_properties       (receive_ext PROPERTIES COMPILE_FLAGS "-std=c++11")
-
 add_executable              (timer timer.cpp)
 target_link_libraries       (timer henson_lib format ${mpi_libraries})
 set_target_properties       (timer PROPERTIES COMPILE_FLAGS "-std=c++11")
@@ -19,7 +15,6 @@ if                          (NOT APPLE)
    set                      (linker_flags "${linker_flags} -Wl,-u,henson_set_contexts,-u,henson_set_namemap")
    set_target_properties    (send           PROPERTIES LINK_FLAGS ${linker_flags})
    set_target_properties    (receive        PROPERTIES LINK_FLAGS ${linker_flags})
-   set_target_properties    (receive_ext    PROPERTIES LINK_FLAGS ${linker_flags})
    set_target_properties    (timer          PROPERTIES LINK_FLAGS ${linker_flags})
 endif                       (NOT APPLE)
 

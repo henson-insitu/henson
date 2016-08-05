@@ -47,6 +47,7 @@ int main(int argc, char** argv)
 
     float total_sum;
     MPI_Reduce(&sum, &total_sum, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
+    henson_save_float("sum", total_sum);
 
     if (rank == 0)
         printf("[%d]: Analysis   [t=%d]: total_sum = %f\n", rank, t, total_sum);
