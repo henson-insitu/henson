@@ -2,8 +2,8 @@ def world()
 {
     var procmap = ProcMap()
 
-    var sim = load("sim", "../simple/simulation", "250", procmap)
-    var snd = load("snd", "../../tools/send", "consumer t:int data:array", procmap)
+    var sim = load("sim", "../simple/simulation 250", procmap)
+    var snd = load("snd", "../../tools/send consumer t:int data:array", procmap)
 
     sim.proceed()
 
@@ -71,8 +71,8 @@ if(proc_map.isInGroup("scheduler"))
 else if(proc_map.isInGroup("consumer"))
 {
 
-    var rcv = load("rcv", "../../tools/receive_ext", "scheduler t:int data:array", proc_map)
-    var ana = load("ana", "../simple/analysis", "", proc_map)
+    var rcv = load("rcv", "../../tools/receive_ext scheduler t:int data:array", proc_map)
+    var ana = load("ana", "../simple/analysis", proc_map)
 
     rcv.proceed()
 

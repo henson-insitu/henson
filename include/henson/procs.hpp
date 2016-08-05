@@ -106,10 +106,11 @@ class ProcMap
                 if(job_rank_ >= elem.second.first && job_rank_ <= elem.second.second)
                     return this->size(elem.first);
             }
+            return 0;
         }
         //This logic was messed up I think in Henson as well
         bool       is_leader(int rank) const
-        { 
+        {
             bool isLeader = false;
             for (ExtendedMap::const_iterator it = procs_.begin(); it != procs_.end(); ++it)
             {

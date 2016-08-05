@@ -8,8 +8,8 @@ def world()
 
     if(procmap.isInGroup("producer"))
     {
-        var sim = load("sim", "../simple/simulation", "250", procmap)
-        var snd = load("snd", "../../tools/send", "consumer t:int data:array", procmap)
+        var sim = load("sim", "../simple/simulation 250", procmap)
+        var snd = load("snd", "../../tools/send consumer t:int data:array", procmap)
 
         sim.proceed()
 
@@ -26,8 +26,8 @@ def world()
     else if(procmap.isInGroup("consumer"))
     {
 
-        var rcv = load("rcv", "../../tools/receive", "producer t:int data:array", procmap)
-        var ana = load("ana", "../simple/analysis", "", procmap)
+        var rcv = load("rcv", "../../tools/receive producer t:int data:array", procmap)
+        var ana = load("ana", "../simple/analysis", procmap)
 
         rcv.proceed()
 

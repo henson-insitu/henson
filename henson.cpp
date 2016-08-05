@@ -17,6 +17,7 @@ std::shared_ptr<spd::logger> logger;
 #include <henson/data.hpp>
 #include <henson/procs.hpp>
 #include <henson/hwl.hpp>
+#include <henson/command-line.hpp>
 namespace h = henson;
 
 // http://stackoverflow.com/a/1486931/44738
@@ -33,48 +34,6 @@ clock_output(h::time_type t)
 {
     return fmt::format("{} ({})", h::clock_to_string(t), clock_to_seconds(t));
 }
-
-struct CommandLine
-{
-    // need to disallow copy to avoid pitfalls with the argv pointers into arguments
-
-                                CommandLine()                   =default;
-                                CommandLine(const CommandLine&) =delete;
-                                CommandLine(CommandLine&&)      =default;
-                                CommandLine(const std::string& line)
-    {
-        int prev = -1;
-        size_t pos = 0;
-        while (pos != std::string::npos)
-        {
-            pos = line.find(' ', pos + 1);
-
-            std::vector<char> arg(line.begin() + prev + 1, pos == std::string::npos ? line.end() : line.begin() + pos);
-            for (char c : arg)
-            {
-                if (!std::isspace(c))
-                {
-                    arg.push_back('\0');
-                    arguments.push_back(std::move(arg));
-                    break;
-                }
-            }
-
-            prev = pos;
-        }
-
-        for (auto& s : arguments)
-            argv.push_back(&s[0]);
-    }
-
-    CommandLine&                operator=(const CommandLine&)   =delete;
-    CommandLine&                operator=(CommandLine&&)        =default;
-
-    std::string                 executable() const              { return std::string(arguments[0].begin(), arguments[0].end()); }
-
-    std::vector<std::vector<char>>  arguments;
-    std::vector<char*>              argv;
-};
 
 typedef     std::unique_ptr<h::Puppet>                  PuppetUniquePtr;
 typedef     std::map<std::string, PuppetUniquePtr>      Puppets;
@@ -284,10 +243,7 @@ int main(int argc, char *argv[])
 
     // convert script into puppets
     // TODO: technically, we don't need to load puppets that we don't need, but I'm guessing it's a small overhead
-    std::string prefix = script_fn;
-    if (prefix[0] != '/' && prefix[0] != '~')
-        prefix = "./" + prefix;
-    prefix = prefix.substr(0, prefix.rfind('/') + 1);
+    std::string prefix = h::prefix(script_fn);
 
     Puppets                                         puppets;
     for (auto& p : script.puppets)
@@ -308,11 +264,8 @@ int main(int argc, char *argv[])
         auto cmd_expanded = cmd.generate(variables);
         logger->trace("Command parsed and expanded: {}", cmd_expanded);
 
-        auto cmd_line = CommandLine(cmd_expanded);
-        auto exec = cmd_line.executable();
-        if (exec[0] != '/' && exec[0] != '~')
-            exec = prefix + exec;
-        puppets[p.name] = PuppetUniquePtr(new h::Puppet(exec,
+        auto cmd_line = h::CommandLine(cmd_expanded);
+        puppets[p.name] = PuppetUniquePtr(new h::Puppet(cmd_line.executable(prefix),
                                                         cmd_line.argv.size(),
                                                         &cmd_line.argv[0],
                                                         procmap.get(),

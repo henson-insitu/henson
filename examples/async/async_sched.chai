@@ -3,38 +3,38 @@ var sched = Scheduler()
 def world()
 {
     var procmap = ProcMap()
-    
+
     if(procmap.isInGroup("producer"))
     {
-        var sim = load("sim", "../simple/simulation", "250 10 1", procmap)
-        var snd = load("snd", "../../tools/send", "--async consumer t:int data:array", procmap)
-    
+        var sim = load("sim", "../simple/simulation 250 10 1", procmap)
+        var snd = load("snd", "../../tools/send --async consumer t:int data:array", procmap)
+
         sim.proceed()
-    
+
         while(sim.running())
         {
             snd.proceed()
             sim.proceed()
         }
-    
+
         snd.signal_stop()
         snd.proceed()
-    
+
     }
     else if(procmap.isInGroup("consumer"))
     {
-    
-        var rcv = load("rcv", "../../tools/receive", "--async producer t:int data:array", procmap)
-        var ana = load("ana", "../simple/analysis", "3", procmap)
-    
+
+        var rcv = load("rcv", "../../tools/receive --async producer t:int data:array", procmap)
+        var ana = load("ana", "../simple/analysis 3", procmap)
+
         rcv.proceed()
-    
+
         while(rcv.running())
         {
             ana.proceed()
             rcv.proceed()
         }
-    
+
     }
     else
     {

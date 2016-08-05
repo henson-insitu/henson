@@ -4,8 +4,8 @@ var procmap = ProcMap()
 def world()
 {
     var procmap = ProcMap()
-    var sim = load("sim", "../simple/simulation", "250", procmap)
-    var ana = load("ana", "../simple/analysis", "", procmap)
+    var sim = load("sim", "../simple/simulation 250", procmap)
+    var ana = load("ana", "../simple/analysis", procmap)
 
     var name_map = NameMap()
     var local_rank = procmap.get_local_rank()

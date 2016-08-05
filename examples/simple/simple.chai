@@ -2,8 +2,8 @@ var procmap = ProcMap()
 
 if(procmap.isInGroup("world"))
 {
-    var sim = load("sim", "../simple/simulation", "250", procmap)
-    var ana = load("ana", "../simple/analysis", "", procmap)
+    var sim = load("sim", "../simple/simulation 250", procmap)
+    var ana = load("ana", "../simple/analysis", procmap)
 
     sim.proceed()
 

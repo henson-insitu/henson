@@ -14,6 +14,8 @@
 
 #include <mpi.h>
 
+#include <spdlog/spdlog.h>
+namespace spd = spdlog;
 #include <chaiscript/chaiscript.hpp>
 #include <chaiscript/chaiscript_stdlib.hpp>
 #include <henson/procs.hpp>
@@ -27,8 +29,6 @@
 #define SCRIPT_TAG          5
 #define INTERCOMM_FIND_TAG  6
 #define NONCOLLECTIVE_TAG   77
-
-typedef     std::shared_ptr<henson::ProcMap>            ProcMapSharedPtr;
 
 namespace henson
 {
@@ -54,8 +54,8 @@ class Scheduler
 
         typedef std::pair<std::string, double> StackElement;
 
-        Scheduler(bool verbose, MPI_Comm world,  chaiscript::ChaiScript* chai, henson::ProcMap * pm): world_(world), chai_(chai), proc_map_(pm), 
-                                                                                        is_active_(true), num_consecutive_procs_(0), MAX_JOBS_(5000), verbose_(verbose) 
+        Scheduler(MPI_Comm world,  chaiscript::ChaiScript* chai, henson::ProcMap * pm): world_(world), chai_(chai), proc_map_(pm),
+                                                                                        is_active_(true), num_consecutive_procs_(0), MAX_JOBS_(5000)
 
         {
             MPI_Comm_rank(world_, &rank_);
@@ -117,7 +117,7 @@ class Scheduler
             if(!jobs_.empty())
                 next = jobs_.front();
 
-            while(!jobs_.empty() && next.num_procs <= num_consecutive_procs_) 
+            while(!jobs_.empty() && next.num_procs <= num_consecutive_procs_)
             {
                 //std::cout << "About to get next job from front of queue" << std::endl;
 
@@ -438,8 +438,8 @@ class Scheduler
 
 
 
-            //Converting map into string, don't judge me, everything is already written for a 
-            //string and this keeps me from transmitting a map piecmeal from one side of the 
+            //Converting map into string, don't judge me, everything is already written for a
+            //string and this keeps me from transmitting a map piecmeal from one side of the
             //MPI comm to the other
             std::string group_string = "";
             for(auto it = next.groups.begin(); it != next.groups.end(); it++)
@@ -453,9 +453,8 @@ class Scheduler
             }
 
 
-            //Send job to free procs
-            if(verbose_)
-                std::cout << "Sending job to procs " << first << " through " << last << std::endl;
+            // Send job to free procs
+            log_->debug("Sending job to procs {} through {}", first, last);
             std::vector<int> first_last_procs(2, 0);
             first_last_procs[0] = first;
             first_last_procs[1] = last;
@@ -636,12 +635,11 @@ class Scheduler
         std::vector<StackElement>                           stack_;
 
         chaiscript::ChaiScript*                             chai_;
-        henson::ProcMap*                                    proc_map_;
+        ProcMap*                                            proc_map_;
 
         bool                                                is_active_;
-        bool                                                verbose_;
 
-
+        std::shared_ptr<spd::logger>                        log_ = spd::get("henson");
 };
 
 }

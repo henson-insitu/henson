@@ -7,7 +7,7 @@
 #include "mpi.h"
 
 // Implements algorithm from "Noncollective Communicator Creation in MPI" by Dinan et al.
-void non_collective_comm_create(MPI_Group the_group, MPI_Comm parent_comm, int tag, MPI_Comm* new_comm)
+inline void non_collective_comm_create(MPI_Group the_group, MPI_Comm parent_comm, int tag, MPI_Comm* new_comm)
 {
     int parent_rank, group_rank, group_size;
     MPI_Group parent_group;
