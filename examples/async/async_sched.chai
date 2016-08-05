@@ -4,7 +4,7 @@ def world()
 {
     var procmap = ProcMap()
 
-    if(procmap.isInGroup("producer"))
+    if(procmap.group("producer"))
     {
         var sim = load("sim", "../simple/simulation 250 10 1", procmap)
         var snd = load("snd", "../../tools/send --async consumer t:int data:array", procmap)
@@ -19,9 +19,8 @@ def world()
 
         snd.signal_stop()
         snd.proceed()
-
     }
-    else if(procmap.isInGroup("consumer"))
+    else if(procmap.group("consumer"))
     {
 
         var rcv = load("rcv", "../../tools/receive --async producer t:int data:array", procmap)
@@ -34,13 +33,11 @@ def world()
             ana.proceed()
             rcv.proceed()
         }
-
     }
     else
     {
         print("I'm not part of producer or consumer group!!! Error!")
     }
-
 }
 var size = sched.get_size()
 var rank = sched.get_global_rank()

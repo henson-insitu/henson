@@ -63,23 +63,23 @@ class ProcMap
         int                 color() const                                                               { return color_; }
         int                 leader(const std::string& name) const                                       { return procs_.find(name)->second.first; }
         int                 size(const std::string& name) const                                         { return (procs_.find(name)->second.second - procs_.find(name)->second.first + 1); }
-        int                 get_local_rank() const                                                      { int rank; MPI_Comm_rank(local_, &rank); return rank; }
-        int                 get_job_rank() const                                                        { return job_rank_; }
-        henson::ProcMap *   get_child()                                                                 { return child_; }
-        henson::ProcMap *   get_parent()                                                                { return parent_; }
+        int                 rank() const                                                                { int rank; MPI_Comm_rank(local_, &rank); return rank; }
+        int                 job_rank() const                                                            { return job_rank_; }
+        henson::ProcMap*    get_child()                                                                 { return child_; }
+        henson::ProcMap*    get_parent()                                                                { return parent_; }
         void                set_child(henson::ProcMap* child)                                           { child_ = child; }
         void                set_parent(henson::ProcMap* parent)                                         { parent_ = parent; }
-        IntercommCache&     get_intercomm_cache()                                                       { return intercomm_cache_; }
 
-        bool        isInGroup(const std::string& group_name) const                              { return (job_rank_ >= procs_.find(group_name)->second.first &&
-                                                                                                          job_rank_ <= procs_.find(group_name)->second.second); }
-        std::string &       get_job_name()                                                              { return job_name_; }
+        bool                group(const std::string& group_name) const                                  { return (job_rank_ >= procs_.find(group_name)->second.first &&
+                                                                                                                  job_rank_ <= procs_.find(group_name)->second.second); }
+        std::string         job_name() const                                                            { return job_name_; }
         void                set_job_name(std::string jb_name)                                           { job_name_ = jb_name; }
 
-        henson::ProcMap * get_lowest_procmap()
+        henson::ProcMap*    get_lowest_procmap()
         {
-            henson::ProcMap * lowest_procmap = this;
-            while(lowest_procmap->get_child()) lowest_procmap = lowest_procmap->get_child();
+            henson::ProcMap* lowest_procmap = this;
+            while (lowest_procmap->get_child())
+                lowest_procmap = lowest_procmap->get_child();
             return lowest_procmap;
         }
 
@@ -127,8 +127,8 @@ class ProcMap
 
         MPI_Comm    search_for_cached_intercomm(henson::ProcMap* pm, const std::string& to, int tag)
         {
-            IntercommCache::const_iterator it = pm->get_intercomm_cache().find(to);
-            if (it != pm->get_intercomm_cache().end())
+            IntercommCache::const_iterator it = pm->intercomm_cache_.find(to);
+            if (it != pm->intercomm_cache_.end())
             {
                 //Job seeking to talk to top level
                 if(pm->get_parent() == NULL && pm->get_child() != NULL)
@@ -256,8 +256,8 @@ class ProcMap
 
         MPI_Comm    intracomm(const std::string& to)
         {
-            IntercommCache::const_iterator it = get_intercomm_cache().find(to);
-            if(it != get_intercomm_cache().end())
+            IntercommCache::const_iterator it = intercomm_cache_.find(to);
+            if(it != intercomm_cache_.end())
                 return it->second.intra_comm;
             else
                 throw std::runtime_error("Error: no intracomm associated with " + to);

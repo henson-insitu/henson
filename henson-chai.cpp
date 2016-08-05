@@ -136,11 +136,11 @@ int main(int argc, char *argv[])
 
     // ProcMap
     chai.add(chaiscript::fun([&proc_map]() { return proc_map.get_lowest_procmap(); }),  "ProcMap");
-    chai.add(chaiscript::fun(&henson::ProcMap::isInGroup),                              "isInGroup");
-    chai.add(chaiscript::fun(&henson::ProcMap::get_local_rank),                         "get_local_rank");
-    chai.add(chaiscript::fun(&henson::ProcMap::get_job_rank),                           "get_job_rank");
+    chai.add(chaiscript::fun(&henson::ProcMap::group),                                  "group");
+    chai.add(chaiscript::fun(&henson::ProcMap::rank),                                   "rank");
+    chai.add(chaiscript::fun(&henson::ProcMap::job_rank),                               "job_rank");
     chai.add(chaiscript::fun(&henson::ProcMap::color),                                  "color");
-    chai.add(chaiscript::fun(&henson::ProcMap::get_job_name),                           "get_job_name");
+    chai.add(chaiscript::fun(&henson::ProcMap::job_name),                               "job_name");
     chai.add(chaiscript::fun([&](const std::string& to)
     {
         proc_map.get_lowest_procmap()->intercomm(to);

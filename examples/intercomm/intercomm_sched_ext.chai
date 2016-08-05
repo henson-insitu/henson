@@ -16,7 +16,7 @@ def world()
     snd.signal_stop()
     snd.proceed()
 
-    if(procmap.get_job_rank() == 0)
+    if(procmap.job_rank() == 0)
     {
         return 1.0;
     }
@@ -28,7 +28,7 @@ def world()
 
 
 var proc_map = ProcMap()
-if(proc_map.isInGroup("scheduler"))
+if(proc_map.group("scheduler"))
 {
     var sched = Scheduler()
     var procs = sched.get_size()
@@ -68,7 +68,7 @@ if(proc_map.isInGroup("scheduler"))
     }
 
 }
-else if(proc_map.isInGroup("consumer"))
+else if(proc_map.group("consumer"))
 {
 
     var rcv = load("rcv", "../../tools/receive_ext scheduler t:int data:array", proc_map)

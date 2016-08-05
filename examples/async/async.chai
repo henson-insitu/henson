@@ -1,7 +1,6 @@
-
 var procmap = ProcMap()
 
-if(procmap.isInGroup("producer"))
+if(procmap.group("producer"))
 {
     var sim = load("sim", "../simple/simulation 250 10 1", procmap)
     var snd = load("snd", "../../tools/send --async consumer t:int data:array", procmap)
@@ -16,9 +15,8 @@ if(procmap.isInGroup("producer"))
 
     snd.signal_stop()
     snd.proceed()
-
 }
-else if(procmap.isInGroup("consumer"))
+else if(procmap.group("consumer"))
 {
 
     var rcv = load("rcv", "../../tools/receive --async producer t:int data:array", procmap)
@@ -31,7 +29,6 @@ else if(procmap.isInGroup("consumer"))
         ana.proceed()
         rcv.proceed()
     }
-
 }
 else
 {

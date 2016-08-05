@@ -1,12 +1,11 @@
-
 var sched = Scheduler()
 
 def world()
 {
     var procmap = ProcMap()
-    procmap.get_local_rank()
+    procmap.rank()
 
-    if(procmap.isInGroup("producer"))
+    if(procmap.group("producer"))
     {
         var sim = load("sim", "../simple/simulation 250", procmap)
         var snd = load("snd", "../../tools/send consumer t:int data:array", procmap)
@@ -23,7 +22,7 @@ def world()
         snd.proceed()
 
     }
-    else if(procmap.isInGroup("consumer"))
+    else if(procmap.group("consumer"))
     {
 
         var rcv = load("rcv", "../../tools/receive producer t:int data:array", procmap)
@@ -44,7 +43,7 @@ def world()
         flush()
     }
 
-    if(procmap.get_job_rank() == 2)
+    if(procmap.job_rank() == 2)
     {
         return 1.0;
     }
@@ -82,8 +81,6 @@ if(sched.is_controller())
         {
             break
         }
-
-
     }
     print("Finished loop sending finish signal!")
     flush()
