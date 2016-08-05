@@ -166,19 +166,17 @@ int main(int argc, char *argv[])
     }
 
     // parse the procs
-    henson::ProcMap::Vector         procs;
-    int                             total_procs = 0;
-    for (std::string procs_size : procs_sizes)
+    std::vector<std::string>        all_group_names;
+    for (auto& x : script.procs)
+        all_group_names.emplace_back(x.first);
+    h::ProcMap::Vector  procs = h::ProcMap::parse_procs(procs_sizes, size, all_group_names);
+
+    h::ProcMap          procmap(world, procs);        // splits the communicator into groups
+    if (rank == 0 && show_sizes)
     {
-        size_t eq_pos = procs_size.find('=');
-        if (eq_pos == std::string::npos)
-        {
-            logger->error("Can't parse {}", procs_size);
-            return 1;
-        }
-        int sz = std::stoi(procs_size.substr(eq_pos + 1, procs_size.size() - eq_pos));
-        procs.emplace_back(procs_size.substr(0, eq_pos), sz);
-        total_procs += sz;
+        fmt::print("Group sizes:\n");
+        for (auto& x : script.procs)
+            fmt::print("  {} = {}\n", x.first, procmap.size(x.first));
     }
 
     // parse variables
@@ -197,46 +195,10 @@ int main(int argc, char *argv[])
         variables[var_name] = var_value;
     }
 
-    if (total_procs > size)
-    {
-        logger->error("Specified procs exceed MPI size: {} > {}", total_procs, size);
-        return 1;
-    }
-
-    // record assigned groups
-    std::set<std::string>   assigned_procs;
-    for (auto& x : procs)
-        assigned_procs.insert(x.first);
-
-    int unassigned = script.procs.size() - assigned_procs.size();
-
-    // assign unassigned procs
-    for (auto& x : script.procs)
-        if (assigned_procs.find(x.first) == assigned_procs.end())
-            procs.emplace_back(x.first, (size - total_procs) / unassigned);
-
-    typedef             std::unique_ptr<h::ProcMap>        ProcMapUniquePtr;
-    ProcMapUniquePtr    procmap;        // splits the communicator into groups
-    try
-    {
-        procmap = ProcMapUniquePtr(new h::ProcMap(world, procs));
-    } catch (std::runtime_error& e)
-    {
-        logger->error("Abort: {}", e.what());
-        return 1;
-    }
-
-    if (rank == 0 && show_sizes)
-    {
-        fmt::print("Group sizes:\n");
-        for (auto& x : script.procs)
-            fmt::print("  {} = {}\n", x.first, procmap->size(x.first));
-    }
-
 
     henson::NameMap                     namemap;        // global namespace shared by the puppets
 
-    int                     color       = procmap->color();
+    int                     color       = procmap.color();
     std::string             group       = procs[color].first;
     int                     group_size  = procs[color].second; UNUSED(group_size);
     const hwl::ControlFlow& control     = script.procs[group];
@@ -268,7 +230,7 @@ int main(int argc, char *argv[])
         puppets[p.name] = PuppetUniquePtr(new h::Puppet(cmd_line.executable(prefix),
                                                         cmd_line.argv.size(),
                                                         &cmd_line.argv[0],
-                                                        procmap.get(),
+                                                        &procmap,
                                                         &namemap));
     }
 
@@ -289,7 +251,7 @@ int main(int argc, char *argv[])
                 fmt::print("[{}]: {} took {}\n", rank, p.first, h::clock_to_string(t));
 
             h::time_type max_t;
-            MPI_Reduce(&t, &max_t, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, procmap->local());
+            MPI_Reduce(&t, &max_t, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, procmap.local());
             max_puppet_times.emplace_back(p.first, max_t);
 
             puppet_time += t;
@@ -297,12 +259,12 @@ int main(int argc, char *argv[])
         h::time_type context_switching_time = total_execution_time - puppet_time - initialization_time;
 
         h::time_type max_init, max_context_switching, max_puppet_time, max_total_time;
-        MPI_Reduce(&initialization_time,    &max_init,              1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, procmap->local());
-        MPI_Reduce(&context_switching_time, &max_context_switching, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, procmap->local());
-        MPI_Reduce(&puppet_time,            &max_puppet_time,       1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, procmap->local());
-        MPI_Reduce(&total_execution_time,   &max_total_time,        1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, procmap->local());
+        MPI_Reduce(&initialization_time,    &max_init,              1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, procmap.local());
+        MPI_Reduce(&context_switching_time, &max_context_switching, 1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, procmap.local());
+        MPI_Reduce(&puppet_time,            &max_puppet_time,       1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, procmap.local());
+        MPI_Reduce(&total_execution_time,   &max_total_time,        1, MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, procmap.local());
 
-        if (procmap->is_leader(rank))
+        if (procmap.is_leader(rank))
         {
             fmt::print("Max times (iter={}) for group {}:\n  init = {}, other = {}; puppet = {}; total = {}\n",
                        iteration, group,

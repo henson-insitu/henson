@@ -14,13 +14,13 @@
 namespace henson
 {
 
-struct CommList
+struct InterIntraComm
 {
-    CommList():inter_comm(MPI_COMM_NULL), intra_comm(MPI_COMM_NULL), translated_rank(-1) {}
+    InterIntraComm():
+        inter_comm(MPI_COMM_NULL), intra_comm(MPI_COMM_NULL), translated_rank(-1)   {}
 
-    CommList(MPI_Comm inter, MPI_Comm intra, int rank): inter_comm(inter),
-                                                        intra_comm(intra),
-                                                        translated_rank(rank){}
+    InterIntraComm(MPI_Comm inter, MPI_Comm intra, int rank):
+        inter_comm(inter), intra_comm(intra), translated_rank(rank)                 {}
 
     MPI_Comm inter_comm;
     MPI_Comm intra_comm;
@@ -33,27 +33,15 @@ class ProcMap
         typedef     std::vector< std::pair<std::string, int> >              Vector;
         typedef     std::map<std::string, int>                              Map;
         typedef     std::map<std::string, std::pair<int, int> >             ExtendedMap;
-        typedef     std::map<std::string, CommList>                         IntercommCache;
+        typedef     std::map<std::string, InterIntraComm>                   IntercommCache;
         typedef     std::map<std::string, MPI_Comm>                         SubIntercommCache;
 
 
     public:
-        ProcMap(MPI_Comm world, const std::vector<std::string>& procs_sizes, int size):
-            color_(0), disable_local_(false), parent_(NULL), child_(NULL)
-        {
-            MPI_Comm_rank(world, &job_rank_);
-
-            auto procs = parse_procs(procs_sizes, size);
-            this->fill(world, procs);
-        }
-
-
                     ProcMap(MPI_Comm world, const Vector& procs):
                         color_(0), disable_local_(false), parent_(NULL), child_(NULL)
         {
-
             MPI_Comm_rank(world, &job_rank_);
-
             this->fill(world, procs);
         }
 
@@ -149,7 +137,7 @@ class ProcMap
 
                     MPI_Intercomm_create(local_, 0, it->second.intra_comm, it->second.translated_rank, tag, &new_comm);
 
-                    intercomm_cache_[to] = CommList(new_comm, MPI_COMM_NULL, -1);
+                    intercomm_cache_[to] = InterIntraComm(new_comm, MPI_COMM_NULL, -1);
 
                     return new_comm;
                 }
@@ -243,7 +231,7 @@ class ProcMap
                 MPI_Group_translate_ranks(remote_group, 1, &remote_rank, combined_group, &translated_remote_rank);
                 disable_local_ = false;
 
-                intercomm_cache_[to] = CommList(comm, newcomm, translated_remote_rank);
+                intercomm_cache_[to] = InterIntraComm(comm, newcomm, translated_remote_rank);
                 return comm;
             }
             else
@@ -330,85 +318,69 @@ class ProcMap
         {
             //This is done this way so the MPI can make a single call
             int size = first_last_procs[1] - first_last_procs[0] + 1;
-            henson::ProcMap * new_child = new ProcMap(job_world, procs_sizes, size);
+            ProcMap* new_child = new ProcMap(job_world, parse_procs(procs_sizes, size));
             set_child(new_child);
             new_child->set_parent(this);
-
         }
 
-
+        static Vector   parse_procs(const std::vector<std::string>& procs_sizes, int size, std::vector<std::string> all_groups = {});
 
     private:
-
-        Vector parse_procs(const std::vector<std::string>& procs_sizes, int size)
-        {
-             Vector procs;
-             std::set<std::string> unassigned_proc;
-             int total_assigned_procs = 0;
-             for (std::string proc_size : procs_sizes)
-             {
-                 size_t eq_pos = proc_size.find('=');
-                 if (eq_pos == std::string::npos)
-                 {
-                     unassigned_proc.insert(proc_size);
-                 }
-                 else
-                 {
-                    int sz = std::stoi(proc_size.substr(eq_pos + 1, proc_size.size() - eq_pos));
-                    procs.emplace_back(proc_size.substr(0, eq_pos), sz);
-                    total_assigned_procs += sz;
-                 }
-             }
-
-
-            int number_unassigned = unassigned_proc.size();
-            int count = 0;
-            int assigned_here = 0;
-            while(!unassigned_proc.empty())
-            {
-                int nprocs = 0;
-                if((((size - total_assigned_procs) % number_unassigned) - count) != 0)
-                {
-                    nprocs = ((size - total_assigned_procs) / number_unassigned) + 1;
-                    ++count;
-                }
-                else
-                    nprocs = ((size - total_assigned_procs) / number_unassigned);
-
-
-                auto it = unassigned_proc.begin();
-                procs.emplace_back(*it, nprocs);
-                unassigned_proc.erase(it);
-                assigned_here += nprocs;
-
-            }
-
-            if(size != total_assigned_procs + assigned_here)
-                throw std::runtime_error("Abort: some of the processors are unassigned!");
-
-            return procs;
-
-
-        }
-
-
         MPI_Comm                                                                world_, local_, dup_world_;
         int                                                                     job_rank_;
         ExtendedMap                                                             procs_;           //The leader is now stored as the first element of the pair in procs_
         //Map                                                                     leaders_;       // stores the ranks of the "root" processes in the subcommunicators (used for creating intercomms)
         int                                                                     color_;
         //std::function<int(const std::string&)>                                  intercomm_callback_func_;
-        henson::ProcMap *                                                       parent_;
-        henson::ProcMap *                                                       child_;
+        henson::ProcMap*                                                        parent_;
+        henson::ProcMap*                                                        child_;
         SubIntercommCache                                                       sub_intercomm_cache_;
         std::string                                                             job_name_;
 
         // NB: this makes ProcMap not thread safe
         mutable bool            disable_local_;
         mutable IntercommCache  intercomm_cache_;
-
-
 };
+
+inline
+ProcMap::Vector
+ProcMap::parse_procs(const std::vector<std::string>& procs_sizes, int size, std::vector<std::string> all_groups)
+{
+    ProcMap::Vector     procs;
+    int                 total_procs = 0;
+    std::set<std::string> unspecified_size;
+    for (std::string procs_size : procs_sizes)
+    {
+        size_t eq_pos = procs_size.find('=');
+        if (eq_pos == std::string::npos)
+        {
+            unspecified_size.insert(procs_size);
+            continue;
+        }
+        int sz = std::stoi(procs_size.substr(eq_pos + 1, procs_size.size() - eq_pos));
+        procs.emplace_back(procs_size.substr(0, eq_pos), sz);
+        total_procs += sz;
+    }
+
+    if (total_procs > size)
+        throw std::runtime_error("Specified procs exceed MPI size");
+
+    // record assigned groups
+    std::set<std::string>   assigned_procs;
+    for (auto& x : procs)
+        assigned_procs.insert(x.first);
+
+    for (auto& x : all_groups)
+        if (assigned_procs.find(x) == assigned_procs.end())
+            unspecified_size.insert(x);
+
+    // assign unassigned procs
+    int unassigned = unspecified_size.size();
+    for (auto& x : unspecified_size)
+        procs.emplace_back(x, (size - total_procs) / unassigned);
+
+    return procs;
+}
 
 }
 

@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
     std::string script_prefix = h::prefix(script_fn);
 
     h::NameMap namemap;
-    h::ProcMap proc_map(world, procs_sizes, size);
+    h::ProcMap proc_map(world, h::ProcMap::parse_procs(procs_sizes, size));
 
     chaiscript::ChaiScript chai(chaiscript::Std_Lib::library());
     chai.add(chaiscript::bootstrap::standard_library::vector_type<std::vector<double>>("VecDouble"));
