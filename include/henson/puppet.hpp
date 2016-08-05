@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
+#include <memory>
 
 #include <unistd.h>
 #include <errno.h>
@@ -18,6 +19,9 @@
 #else
 #include <coro.h>
 #endif
+
+#include <spdlog/spdlog.h>
+namespace spd = spdlog;
 
 #include <format.h>
 #include <henson/data.hpp>
@@ -72,8 +76,7 @@ struct Puppet
                             {
                                 // it's a weird situation, but possible if the puppet doesn't need to get any data in or out
                                 // (the linker may choose not to pull src/data.cpp and so henson_set_namemap will be missing)
-                                fmt::print(std::cerr, "Warning: {}", e.what());
-                                fmt::print(std::cerr, "Reasonable only if {} doesn't need to exchange any data\n", filename_);
+                                log_->warn("{} | Reasonable only if {} doesn't need to exchange any data", e.what(), filename_);
                             }
 
 #ifdef USE_BOOST
@@ -186,6 +189,8 @@ struct Puppet
     time_type           start_time_;
     time_type           total_time_ = 0;
     std::string         puppet_name_;
+
+    std::shared_ptr<spd::logger> log_ = spd::get("henson");
 };
 
 
