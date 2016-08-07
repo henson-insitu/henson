@@ -12,7 +12,7 @@ if                          (use_boost)
     target_link_libraries   (pyhenson ${Boost_CONTEXT_LIBRARY})
     set_target_properties   (pyhenson PROPERTIES COMPILE_FLAGS "-std=c++11 -DUSE_BOOST")
 else()
-    target_link_libraries   (pyhenson libcoro)
+    target_link_libraries   (pyhenson coro)
     set_target_properties   (pyhenson PROPERTIES COMPILE_FLAGS "-std=c++11 ${CORO_TYPE}")
 endif()
 
