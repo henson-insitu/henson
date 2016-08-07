@@ -14,7 +14,8 @@ void
 henson_save_array(const char* name, void* address, size_t type, size_t count, size_t stride)
 {
     if (!namemap) return;
-    namemap->add(name, new henson::Array(address, type, count, stride));
+    henson::Value v; v.tag = v._array; v.a = henson::Array(address, type, count, stride);
+    namemap->add(name, v);
 }
 
 void
@@ -22,86 +23,91 @@ henson_load_array(const char* name, void** address, size_t* type, size_t* count,
 {
     if (!namemap) return;
 
-    henson::Array* a = namemap->get<henson::Array>(name);
-    *address = a->address;
-    *type    = a->type;
-    *count   = a->count;
-    *stride  = a->stride;
+    henson::Array a = namemap->get(name).a;
+    *address = a.address;
+    *type    = a.type;
+    *count   = a.count;
+    *stride  = a.stride;
 }
 
 void
 henson_save_pointer(const char* name, void* ptr)
 {
     if (!namemap) return;
-    namemap->add(name, new henson::Value<void*>(ptr));
+    henson::Value v; v.tag = v._ptr; v.p = ptr;
+    namemap->add(name, v);
 }
 
 void
 henson_load_pointer(const char* name, void** ptr)
 {
     if (!namemap) return;
-    *ptr = namemap->get< henson::Value<void*> >(name)->value;
+    *ptr = namemap->get(name).p;
 }
 
 void
 henson_save_size_t(const char* name, size_t  x)
 {
     if (!namemap) return;
-    namemap->add(name, new henson::Value<size_t>(x));
+    henson::Value v; v.tag = v._size_t; v.s = x;
+    namemap->add(name, v);
 }
 
 void
 henson_load_size_t(const char* name, size_t* x)
 {
     if (!namemap) return;
-    *x = namemap->get< henson::Value<size_t> >(name)->value;
+    *x = namemap->get(name).s;
 }
 
 void
 henson_save_int(const char* name, int  x)
 {
     if (!namemap) return;
-    namemap->add(name, new henson::Value<int>(x));
+    henson::Value v; v.tag = v._int; v.i = x;
+    namemap->add(name, v);
 }
 
 void
 henson_load_int(const char* name, int* x)
 {
     if (!namemap) return;
-    *x = namemap->get< henson::Value<int> >(name)->value;
+    *x = namemap->get(name).i;
 }
 
 void
 henson_save_float(const char* name, float  x)
 {
     if (!namemap) return;
-    namemap->add(name, new henson::Value<float>(x));
+    henson::Value v; v.tag = v._float; v.f = x;
+    namemap->add(name, v);
 }
 
 void
 henson_load_float(const char* name, float* x)
 {
     if (!namemap) return;
-    *x = namemap->get< henson::Value<float> >(name)->value;
+    *x = namemap->get(name).f;
 }
 
 void
 henson_save_double(const char* name, double  x)
 {
     if (!namemap) return;
-    namemap->add(name, new henson::Value<double>(x));
+    henson::Value v; v.tag = v._double; v.d = x;
+    namemap->add(name, v);
 }
 
 void
 henson_load_double(const char* name, double* x)
 {
     if (!namemap) return;
-    *x = namemap->get< henson::Value<double> >(name)->value;
+    *x = namemap->get(name).d;
 }
 
 // C++ interface
 void
-henson::save(const std::string& name, DataType* x)
+henson::save(const std::string& name, Value x)
 {
     if (!namemap) return;
     namemap->add(name, x);
@@ -118,4 +124,11 @@ henson::NameMap*
 henson::get_namemap()
 {
     return namemap;
+}
+
+henson::Value
+henson::load(const std::string& name)
+{
+    if (!get_namemap()) return Value();
+    return get_namemap()->get(name);
 }

@@ -15,8 +15,8 @@ namespace h = henson;
 std::string     timer(std::string name)                     { return "timer_" + name; }
 std::string     timer_start(std::string name)               { return "timer_start_" + name; }
 
-void            save_time(std::string name, h::time_type t) { h::save(name, new h::Value<h::time_type>(t)); }
-h::time_type    load_time(std::string name)                 { return h::load< h::Value<h::time_type> >(name)->value; }
+void            save_time(std::string name, h::time_type t) { h::Value tv; tv.tag = tv._size_t; tv.s = t; h::save(name, tv); }
+h::time_type    load_time(std::string name)                 { return h::load(name).s; }
 
 h::time_type    get_henson_timer(std::string name)
 {

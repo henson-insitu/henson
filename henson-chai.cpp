@@ -109,17 +109,17 @@ int main(int argc, char *argv[])
     // NB: not exposed to chai: arrays
     chai.add(chaiscript::fun([](henson::NameMap* namemap, std::string name)
     {
-        henson::DataType* the_value = namemap->get(name);
-        if(henson::Value<int>* temp = dynamic_cast< henson::Value<int> * >(the_value))
-            return chaiscript::Boxed_Value(temp->value);
-        else if(henson::Value<double>* temp = dynamic_cast<henson::Value<double>*>(the_value))
-            return chaiscript::Boxed_Value(temp->value);
-        else if(henson::Value<float>* temp = dynamic_cast<henson::Value<float>*>(the_value))
-            return chaiscript::Boxed_Value(temp->value);
-        else if(henson::Value<size_t>* temp = dynamic_cast<henson::Value<size_t>*>(the_value))
-            return chaiscript::Boxed_Value(temp->value);
-        else if(henson::Value<void*>* temp = dynamic_cast<henson::Value<void*>*>(the_value))
-            return chaiscript::Boxed_Value((intptr_t)temp->value);
+        henson::Value val = namemap->get(name);
+        if(val.tag == val._int)
+            return chaiscript::Boxed_Value(val.i);
+        else if(val.tag == val._double)
+            return chaiscript::Boxed_Value(val.d);
+        else if(val.tag == val._float)
+            return chaiscript::Boxed_Value(val.f);
+        else if(val.tag == val._size_t)
+            return chaiscript::Boxed_Value(val.s);
+        else if(val.tag == val._ptr)
+            return chaiscript::Boxed_Value((intptr_t) val.p);
         else
         {
             throw std::runtime_error("Error: namemap value (" + name + ") was not an accepted type, or may not exist");

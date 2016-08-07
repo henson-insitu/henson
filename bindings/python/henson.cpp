@@ -81,21 +81,17 @@ PYBIND11_PLUGIN(pyhenson)
 
     py::class_<NameMap>(m, "NameMap")
         .def(py::init<>())
-        .def("get_array",   [](const NameMap& nm, std::string name, std::string format) { return PyArray(*nm.get<Array>(name), format); })
+        .def("get_array",   [](const NameMap& nm, std::string name, std::string format) { return PyArray(nm.get(name).a, format); })
         .def("get",         [](const NameMap& nm, std::string name, std::string format) -> py::object
                             {
                                 if (format == "f")
-                                    return py::float_(nm.get<Value<float>>(name)->value);
+                                    return py::float_(nm.get(name).f);
                                 else if (format == "d")
-                                    return py::float_(nm.get<Value<double>>(name)->value);
+                                    return py::float_(nm.get(name).d);
                                 else if (format == "i")
-                                    return py::int_(nm.get<Value<int>>(name)->value);
-                                else if (format == "I")
-                                    return py::int_(nm.get<Value<uint32_t>>(name)->value);
-                                else if (format == "q")
-                                    return py::int_(nm.get<Value<int64_t>>(name)->value);
+                                    return py::int_(nm.get(name).i);
                                 else if (format == "Q")
-                                    return py::int_(nm.get<Value<uint64_t>>(name)->value);
+                                    return py::int_(nm.get(name).s);
                                 else
                                     throw py::cast_error("Unkown format: " + format);
                             })
