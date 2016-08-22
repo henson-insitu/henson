@@ -39,15 +39,13 @@ class Scheduler
         {
             Job() = default;
             Job(size_t id_, std::string name_, std::string function_, chaiscript::Boxed_Value arg_, ProcMap::Vector groups_, int size_):
-                id(id_), name(name_), function(function_), groups(groups_), size(size_)
-            {
-                henson::save(arg_serialized, arg_);
-            }
+                id(id_), name(name_), function(function_), arg(arg_), groups(groups_), size(size_)
+            {}
 
             size_t                      id;
             std::string                 name;
             std::string                 function;
-            MemoryBuffer                arg_serialized;
+            chaiscript::Boxed_Value     arg;
             ProcMap::Vector             groups;
             int                         size;
         };
@@ -152,11 +150,8 @@ class Scheduler
 
                     proc_map_->extend(job_world, job.groups);
 
-                    chaiscript::Boxed_Value arg;
                     chaiscript::Boxed_Value result;
-                    job.arg_serialized.reset();
-                    henson::load(job.arg_serialized, arg);
-                    if (arg.get_type_info().is_undef())
+                    if (job.arg.get_type_info().is_undef())
                     {
                         // call the argument-free version of the function
                         auto function = chai_->eval<std::function<chaiscript::Boxed_Value()>>(job.function);
@@ -164,7 +159,7 @@ class Scheduler
                     } else
                     {
                         auto function = chai_->eval<std::function<chaiscript::Boxed_Value(chaiscript::Boxed_Value)>>(job.function);
-                        result = function(arg);
+                        result = function(job.arg);
                     }
                     auto& result_ti = result.get_type_info();
                     if (!(result_ti.is_undef() || result_ti.is_void() || result_ti.bare_equal_type_info(typeid(bool))))
@@ -332,7 +327,7 @@ struct Serialization<Scheduler::Job>
         henson::save(bb, j.id);
         henson::save(bb, j.name);
         henson::save(bb, j.function);
-        henson::save(bb, j.arg_serialized);
+        henson::save(bb, j.arg);
         henson::save(bb, j.groups);
         henson::save(bb, j.size);
     }
@@ -342,7 +337,7 @@ struct Serialization<Scheduler::Job>
         henson::load(bb, j.id);
         henson::load(bb, j.name);
         henson::load(bb, j.function);
-        henson::load(bb, j.arg_serialized);
+        henson::load(bb, j.arg);
         henson::load(bb, j.groups);
         henson::load(bb, j.size);
     }

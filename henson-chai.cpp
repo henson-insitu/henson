@@ -153,7 +153,8 @@ int main(int argc, char *argv[])
         return std::make_shared<h::Scheduler>(proc_map.local(), &chai, &proc_map);
     }),                                                                     "Scheduler");
 
-    auto schedule = [](h::Scheduler* s, std::string name, std::string function, chaiscript::Boxed_Value arg, std::map<std::string, chaiscript::Boxed_Value> groups, int size)
+    auto clone    = chai.eval<std::function<chaiscript::Boxed_Value (const chaiscript::Boxed_Value&)>>("clone");
+    auto schedule = [&clone](h::Scheduler* s, std::string name, std::string function, chaiscript::Boxed_Value arg, std::map<std::string, chaiscript::Boxed_Value> groups, int size)
     {
         h::ProcMap::Vector groups_vector;
 
@@ -181,7 +182,7 @@ int main(int argc, char *argv[])
             else
                 groups_vector.emplace_back(x.first, leftover_group_size);
         }
-        s->schedule(name, function, arg, groups_vector, size);
+        s->schedule(name, function, clone(arg), groups_vector, size);
     };
     chai.add(chaiscript::fun(schedule),                                     "schedule");
     chai.add(chaiscript::fun([schedule](h::Scheduler* s, std::string name, std::string function, std::map<std::string, chaiscript::Boxed_Value> groups, int size)
