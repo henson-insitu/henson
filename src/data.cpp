@@ -105,6 +105,20 @@ henson_load_double(const char* name, double* x)
     *x = namemap->get(name).d;
 }
 
+void
+henson_create_queue(const char* name)
+{
+    if (!namemap) return;
+    namemap->create_queue(name);
+}
+
+int
+henson_queue_empty(const char* name)
+{
+    if (!namemap) return 1;
+    return namemap->queue_empty(name);
+}
+
 // C++ interface
 void
 henson::save(const std::string& name, Value x)

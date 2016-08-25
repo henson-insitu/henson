@@ -87,7 +87,6 @@ int main(int argc, char *argv[])
     h::ProcMap proc_map(world, h::ProcMap::parse_procs(procs_sizes, size));
 
     chaiscript::ChaiScript chai(chaiscript::Std_Lib::library());
-    chai.add(chaiscript::bootstrap::standard_library::vector_type<std::vector<double>>("VecDouble"));
 
     // Puppet
     chai.add(chaiscript::user_type<h::Puppet>(),        "Puppet");
@@ -129,14 +128,13 @@ int main(int argc, char *argv[])
             return chaiscript::Boxed_Value();
         }
     }), "get");
+    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, int x)    { h::Value v; v.tag = h::Value::_int;    v.i = x; namemap->add(name, v); }), "add");
+    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, size_t x) { h::Value v; v.tag = h::Value::_size_t; v.s = x; namemap->add(name, v); }), "add");
+    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, float x)  { h::Value v; v.tag = h::Value::_float;  v.f = x; namemap->add(name, v); }), "add");
+    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, double x) { h::Value v; v.tag = h::Value::_double; v.d = x; namemap->add(name, v); }), "add");
+    chai.add(chaiscript::fun(&h::NameMap::create_queue),                    "create_queue");
+    chai.add(chaiscript::fun(&h::NameMap::queue_empty),                     "queue_empty");
 
-    // FIXME: probably don't need this anymore
-    chai.add(chaiscript::fun([&chai](chaiscript::Boxed_Value& bv)
-    {
-        void* temp = (void*) (chai.boxed_cast<intptr_t>(bv));
-        std::vector<double>* v = (std::vector<double> *)temp;
-        return v;
-    }), "convert_to_vec_double");
 
     // ProcMap
     chai.add(chaiscript::fun([&proc_map]() { return &proc_map; }),          "ProcMap");
@@ -202,6 +200,8 @@ int main(int argc, char *argv[])
 
     chai.add(chaiscript::fun([](int secs) { sleep(secs); }),                "sleep");
     chai.add(chaiscript::fun([]() { std::cout << std::flush; }),            "flush");
+    chai.add(chaiscript::fun(&h::get_time),                                 "time");
+    chai.add(chaiscript::fun(&h::clock_to_string),                          "clock_to_string");
 
     // Read and broadcast the script
     std::vector<char> buffered_in;

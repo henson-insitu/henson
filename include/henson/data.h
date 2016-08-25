@@ -27,6 +27,9 @@ void        henson_load_float(const char* name, float* x);
 void        henson_save_double(const char* name, double  x);
 void        henson_load_double(const char* name, double* x);
 
+void        henson_create_queue(const char* name);
+int         henson_queue_empty(const char* name);
+
 #ifdef __cplusplus
 }
 #endif

@@ -81,8 +81,8 @@ PYBIND11_PLUGIN(pyhenson)
 
     py::class_<NameMap>(m, "NameMap")
         .def(py::init<>())
-        .def("get_array",   [](const NameMap& nm, std::string name, std::string format) { return PyArray(nm.get(name).a, format); })
-        .def("get",         [](const NameMap& nm, std::string name, std::string format) -> py::object
+        .def("get_array",   [](NameMap& nm, std::string name, std::string format) { return PyArray(nm.get(name).a, format); })
+        .def("get",         [](NameMap& nm, std::string name, std::string format) -> py::object
                             {
                                 if (format == "f")
                                     return py::float_(nm.get(name).f);

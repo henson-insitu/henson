@@ -1,0 +1,20 @@
+var pm = ProcMap()
+var nm = NameMap()
+
+var exch = load("./exchange", pm)
+
+nm.create_queue("test")
+
+nm.add("test", 8)
+nm.add("test", 5.6)
+nm.add("test", 3)
+nm.add("test", 9.3)
+
+exch.proceed()
+
+while (!nm.queue_empty("test"))
+{
+    var x = nm.get("test")
+    var y = nm.get("test")
+    print("Got ${x} ${y} in chai")
+}

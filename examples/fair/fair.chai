@@ -1,0 +1,30 @@
+var pm = ProcMap()
+
+var sim = load("../simple/simulation 250 10 1", pm)
+var ana = load("../simple/analysis   3",        pm)
+
+def proceed(puppet, timer)
+{
+    var start = time()
+    puppet.proceed()
+    timer += time() - start
+}
+
+var sim_time = 0UL
+var ana_time = 0UL
+
+proceed(sim, sim_time)
+while (sim.running())
+{
+    if (pm.local_rank() == 0)
+    {
+        print("Simulation time: ${sim_time}")
+        print("Analysis time:   ${ana_time}")
+    }
+
+    if (ana_time < sim_time)
+    {
+        proceed(ana, ana_time)
+    }
+    proceed(sim, sim_time)
+}
