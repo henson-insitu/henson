@@ -109,7 +109,7 @@ class Scheduler
             while(!jobs_.empty() && find_available_procs(jobs_.front().size) < available_procs_.size())
                 run_job();
 
-            return unfinished_jobs() || !jobs_.empty();
+            return unfinished_jobs() || !jobs_.empty() || !results_empty();
         }
 
         void    listen()
