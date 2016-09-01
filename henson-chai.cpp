@@ -134,6 +134,7 @@ int main(int argc, char *argv[])
     chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, double x) { h::Value v; v.tag = h::Value::_double; v.d = x; namemap->add(name, v); }), "add");
     chai.add(chaiscript::fun(&h::NameMap::create_queue),                    "create_queue");
     chai.add(chaiscript::fun(&h::NameMap::queue_empty),                     "queue_empty");
+    chai.add(chaiscript::fun(&h::NameMap::exists),                          "exists");
 
 
     // ProcMap
