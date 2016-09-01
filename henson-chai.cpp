@@ -221,8 +221,15 @@ int main(int argc, char *argv[])
     buffered_in.resize(file_size);  // does nothing on rank 0
     MPI_Bcast(buffered_in.data(), file_size, MPI_CHAR, 0, world);
 
-    std::string new_string(buffered_in.begin(), buffered_in.end());
-    chai.eval(new_string);
+    try
+    {
+        std::string new_string(buffered_in.begin(), buffered_in.end());
+        chai.eval(new_string);
+    } catch(const std::exception& e)
+    {
+        logger->critical("Caught: {}", e.what());
+        MPI_Abort(world, 1);
+    }
 
     logger->info("henson done");
 }
