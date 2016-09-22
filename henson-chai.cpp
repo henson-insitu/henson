@@ -41,11 +41,13 @@ int main(int argc, char *argv[])
     MPI_Comm_size(world, &size);
 
     std::vector<std::string>    procs_sizes;
+    std::vector<std::string>    variables;
     std::string                 log_level = "info";
     using namespace opts;
     Options ops(argc, argv);
     ops
         >> Option('p', "procs", procs_sizes, "number of processors to use for a control group")
+        >> Option('v', "var",   variables,   "define variables to inject into the script")
         >> Option('l', "log",   log_level,   "log level to use")
     ;
 
@@ -220,6 +222,21 @@ int main(int argc, char *argv[])
     MPI_Bcast(&file_size, 1, MPI_INT, 0, world);
     buffered_in.resize(file_size);  // does nothing on rank 0
     MPI_Bcast(buffered_in.data(), file_size, MPI_CHAR, 0, world);
+
+    // parse variables and inject them as globals
+    std::map<std::string,std::string>   vars;
+    for (auto& var : variables)
+    {
+        size_t eq_pos = var.find('=');
+        if (eq_pos == std::string::npos)
+        {
+            logger->error("Can't parse {}", var);
+            return 1;
+        }
+        auto var_name  = var.substr(0, eq_pos);
+        auto var_value = var.substr(eq_pos + 1, var.size() - eq_pos);
+        chai.add_global(chaiscript::var(var_value), var_name);
+    }
 
     try
     {
