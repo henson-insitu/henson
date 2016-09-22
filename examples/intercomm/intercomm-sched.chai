@@ -1,6 +1,6 @@
 var sched = Scheduler()
 
-def world()
+def world(args)
 {
     var procmap = ProcMap()
     var namemap = NameMap()
@@ -56,7 +56,7 @@ if(sched.is_controller())
     var number_trials = 10
     for(var m = 0; m < number_trials; ++m)
     {
-        sched.schedule("${m}", "world", ["producer" : 0, "consumer" : 0], sched.workers())
+        sched.schedule("${m}", "world", [], ["producer" : 0, "consumer" : 0], sched.workers())
     }
 
     while(sched.control()) { }

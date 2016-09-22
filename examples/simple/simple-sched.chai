@@ -1,7 +1,7 @@
 var sched   = Scheduler()
 var procmap = ProcMap()
 
-def world()
+def world(args)
 {
     var procmap = ProcMap()
     var namemap = NameMap()
@@ -33,21 +33,16 @@ if(sched.is_controller())
 {
     for(var i = 0; i < 5; ++i)
     {
-        sched.schedule("job-${i}", "world", ["all" : 0], sched.workers())
+        sched.schedule("job-${i}", "world", [], ["all" : 0], sched.workers())
     }
 
-    while(sched.control())
+    while(sched.control() || !sched.results_empty())
     {
         if (!sched.results_empty())
         {
             var x = sched.pop()
             print("Got result: ${x}")
         }
-    }
-    while(!sched.results_empty())
-    {
-        var x = sched.pop()
-        print("Got result: ${x}")
     }
     sched.finish()
 }

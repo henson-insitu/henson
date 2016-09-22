@@ -31,14 +31,15 @@ if (pm.group() == "storage")
         {
             scheduler.schedule("${i}", "compute", i, ["compute": 0], 2)
         }
-        while (scheduler.control()) {}
-        scheduler.finish()
-
-        while(!scheduler.results_empty())
+        while (scheduler.control() || !scheduler.results_empty())
         {
-            var x = scheduler.pop()
-            print("Got result: ${x}")
+            while(!scheduler.results_empty())
+            {
+                var x = scheduler.pop()
+                print("Got result: ${x}")
+            }
         }
+        scheduler.finish()
     } else
     {
         scheduler.listen()

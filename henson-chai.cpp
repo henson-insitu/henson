@@ -186,10 +186,6 @@ int main(int argc, char *argv[])
         s->schedule(name, function, clone(arg), groups_vector, size);
     };
     chai.add(chaiscript::fun(schedule),                                     "schedule");
-    chai.add(chaiscript::fun([schedule](h::Scheduler* s, std::string name, std::string function, std::map<std::string, chaiscript::Boxed_Value> groups, int size)
-    {
-        schedule(s,name,function,chaiscript::Boxed_Value(),groups,size);
-    }),                                                                     "schedule");
     chai.add(chaiscript::fun(&h::Scheduler::listen),                        "listen");
     chai.add(chaiscript::fun(&h::Scheduler::size),                          "size");
     chai.add(chaiscript::fun(&h::Scheduler::rank),                          "rank");
