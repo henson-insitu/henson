@@ -95,6 +95,7 @@ int main(int argc, char *argv[])
     chai.add(chaiscript::fun(&h::Puppet::proceed),      "proceed");
     chai.add(chaiscript::fun(&h::Puppet::running),      "running");
     chai.add(chaiscript::fun(&h::Puppet::signal_stop),  "signal_stop");
+    chai.add(chaiscript::fun(&h::Puppet::total_time),   "total_time");
 
     chai.add(chaiscript::fun([&namemap,script_prefix](std::string cmd_line_str, henson::ProcMap* pm)
     {

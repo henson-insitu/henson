@@ -12,6 +12,12 @@ if(procmap.group() == "world")
         ana.proceed()
         sim.proceed()
     }
+
+    if (procmap.local_rank() == 0)
+    {
+        print("Total time in simulation: ${clock_to_string(sim.total_time())}");
+        print("Total time in analysis:   ${clock_to_string(ana.total_time())}");
+    }
 }
 else
 {
