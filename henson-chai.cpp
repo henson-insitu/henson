@@ -60,7 +60,11 @@ int main(int argc, char *argv[])
         if (spd::level::level_names[lvl] == log_level)
             break;
     if (verbose || rank == 0)
-        logger->set_level(static_cast<spd::level::level_enum>(lvl));
+    {
+        auto level = static_cast<spd::level::level_enum>(lvl);
+        logger->set_level(level);
+        logger->flush_on(level);
+    }
 
     logger->set_pattern(fmt::format("[{}]: [%Y-%m-%d %H:%M:%S.%e] [%l] %v", rank));
 
@@ -92,7 +96,12 @@ int main(int argc, char *argv[])
 
     // Puppet
     chai.add(chaiscript::user_type<h::Puppet>(),        "Puppet");
-    chai.add(chaiscript::fun(&h::Puppet::proceed),      "proceed");
+    auto log = logger;
+    chai.add(chaiscript::fun([log](h::Puppet& puppet)
+    {
+        log->debug("Proceeding with {}", puppet.puppet_name_);
+        puppet.proceed();
+    }), "proceed");
     chai.add(chaiscript::fun(&h::Puppet::running),      "running");
     chai.add(chaiscript::fun(&h::Puppet::signal_stop),  "signal_stop");
     chai.add(chaiscript::fun(&h::Puppet::total_time),   "total_time");
