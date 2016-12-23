@@ -78,10 +78,10 @@ int main(int argc, char *argv[])
         >> Option('l', "log",   log_level,   "log level to use")
     ;
 
-    bool verbose    = ops >> Present('v', "verbose",    "verbose output");
+    bool verbose    = ops >> Present("verbose",    "verbose output");
 
     logger = spd::stderr_logger_st("henson");
-    logger->set_level(spd::level::off);
+    logger->set_level(spd::level::warn);
     int lvl;
     for (lvl = spd::level::trace; lvl < spd::level::off; ++lvl)
         if (spd::level::level_names[lvl] == log_level)
