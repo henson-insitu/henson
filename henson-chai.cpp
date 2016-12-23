@@ -7,6 +7,9 @@
 #include <memory>
 #include <unistd.h>
 
+#include <signal.h>
+#include <execinfo.h>
+
 #include <mpi.h>
 
 #include <opts/opts.h>
@@ -26,9 +29,33 @@ std::shared_ptr<spd::logger> logger;
 #include <henson/command-line.hpp>
 namespace h = henson;
 
+// used for debugging of segfaults
+int rank;
+std::string active_puppet;
+std::shared_ptr<h::ProcMap> proc_map;
+
+void catch_sig(int signum)
+{
+    // print backtrace
+    void *callstack[128];
+    int frames  = backtrace(callstack, 128);
+    char** strs = backtrace_symbols(callstack, frames);
+
+    logger->critical("caught signal {}; active puppet {}; local group = {}, local rank = {}",
+                     signum, active_puppet, proc_map->group(), proc_map->local_rank());
+    for (int i = 0; i < frames; ++i)
+        logger->critical("{}", strs[i]);
+
+    // pass on the signal
+    //signal(signum, SIG_DFL);
+    exit(1);
+}
+
 
 int main(int argc, char *argv[])
 {
+    signal(SIGSEGV, catch_sig);     // catch segfault
+
     h::time_type start_time = h::get_time();
 
     h::MPIEnvironment mpi_env(&argc, &argv);    // RAII
@@ -36,7 +63,7 @@ int main(int argc, char *argv[])
     MPI_Comm world;
     MPI_Comm_dup(MPI_COMM_WORLD, &world);
 
-    int rank, size;
+    int size;
     MPI_Comm_rank(world, &rank);
     MPI_Comm_size(world, &size);
 
@@ -90,16 +117,16 @@ int main(int argc, char *argv[])
     std::string script_prefix = h::prefix(script_fn);
 
     h::NameMap namemap;
-    h::ProcMap proc_map(world, h::ProcMap::parse_procs(procs_sizes, size));
+    proc_map = std::make_shared<h::ProcMap>(world, h::ProcMap::parse_procs(procs_sizes, size));
 
     chaiscript::ChaiScript chai(chaiscript::Std_Lib::library());
 
     // Puppet
     chai.add(chaiscript::user_type<h::Puppet>(),        "Puppet");
-    auto log = logger;
-    chai.add(chaiscript::fun([log](h::Puppet& puppet)
+    chai.add(chaiscript::fun([](h::Puppet& puppet)
     {
-        log->debug("Proceeding with {}", puppet.puppet_name_);
+        active_puppet = puppet.puppet_name_;
+        logger->debug("Proceeding with {}", puppet.puppet_name_);
         puppet.proceed();
     }), "proceed");
     chai.add(chaiscript::fun(&h::Puppet::running),      "running");
@@ -150,7 +177,7 @@ int main(int argc, char *argv[])
 
 
     // ProcMap
-    chai.add(chaiscript::fun([&proc_map]() { return &proc_map; }),          "ProcMap");
+    chai.add(chaiscript::fun([]() { return proc_map; }),                    "ProcMap");
     chai.add(chaiscript::fun(&h::ProcMap::group),                           "group");
     chai.add(chaiscript::fun(&h::ProcMap::color),                           "color");
     chai.add(chaiscript::fun(&h::ProcMap::world_rank),                      "world_rank");
@@ -159,9 +186,9 @@ int main(int argc, char *argv[])
                              { pm->intercomm(to); }),                       "intercomm");
 
     // Scheduler
-    chai.add(chaiscript::fun([&chai, &proc_map]()
+    chai.add(chaiscript::fun([&chai]()
     {
-        return std::make_shared<h::Scheduler>(proc_map.local(), &chai, &proc_map);
+        return std::make_shared<h::Scheduler>(proc_map->local(), &chai, proc_map.get());
     }),                                                                     "Scheduler");
 
     auto clone    = chai.eval<std::function<chaiscript::Boxed_Value (const chaiscript::Boxed_Value&)>>("clone");
