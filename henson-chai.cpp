@@ -48,7 +48,7 @@ void catch_sig(int signum)
 
     // pass on the signal
     //signal(signum, SIG_DFL);
-    exit(1);
+    MPI_Abort(MPI_COMM_WORLD, 1);
 }
 
 
