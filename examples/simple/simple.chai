@@ -5,12 +5,9 @@ if(procmap.group() == "world")
     var sim = load("../simple/simulation 250", procmap)
     var ana = load("../simple/analysis", procmap)
 
-    sim.proceed()
-
-    while(sim.running())
+    while(sim.proceed())
     {
         ana.proceed()
-        sim.proceed()
     }
 
     if (procmap.local_rank() == 0)

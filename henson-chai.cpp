@@ -33,6 +33,7 @@ namespace h = henson;
 int rank;
 std::string active_puppet;
 std::shared_ptr<h::ProcMap> proc_map;
+bool abort_on_segfault_ = true;
 
 #include <cxxabi.h>
 
@@ -104,9 +105,9 @@ void catch_sig(int signum)
     //for (int i = 0; i < frames; ++i)
     //    logger->critical("{}", strs[i]);
 
-    // pass on the signal
-    //signal(signum, SIG_DFL);
-    MPI_Abort(MPI_COMM_WORLD, 1);
+    signal(signum, SIG_DFL);    // restore the default signal
+    if (abort_on_segfault_)
+        MPI_Abort(MPI_COMM_WORLD, 1);
 }
 
 
@@ -186,6 +187,7 @@ int main(int argc, char *argv[])
         active_puppet = puppet.puppet_name_;
         logger->debug("Proceeding with {}", puppet.puppet_name_);
         puppet.proceed();
+        return puppet.running();
     }), "proceed");
     chai.add(chaiscript::fun(&h::Puppet::running),      "running");
     chai.add(chaiscript::fun(&h::Puppet::signal_stop),  "signal_stop");
@@ -296,6 +298,8 @@ int main(int argc, char *argv[])
     chai.add(chaiscript::fun([]() { std::cout << std::flush; }),            "flush");
     chai.add(chaiscript::fun(&h::get_time),                                 "time");
     chai.add(chaiscript::fun(&h::clock_to_string),                          "clock_to_string");
+    chai.add(chaiscript::fun([](bool abort_on_segfault)
+                             { abort_on_segfault_ = abort_on_segfault; }),  "abort_on_segfault");
 
     // Read and broadcast the script
     std::vector<char> buffered_in;
@@ -340,4 +344,5 @@ int main(int argc, char *argv[])
     }
 
     logger->info("henson done");
+    signal(SIGSEGV, SIG_DFL);       // restore default signal
 }
