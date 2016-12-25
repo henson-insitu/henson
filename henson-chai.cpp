@@ -345,4 +345,6 @@ int main(int argc, char *argv[])
 
     logger->info("henson done");
     signal(SIGSEGV, SIG_DFL);       // restore default signal
+
+    proc_map = std::shared_ptr<h::ProcMap>();   // release ProcMap before MPI_Finalize from RAII
 }
