@@ -49,7 +49,7 @@ int main(int argc, char** argv)
     }
 
     // Setup communicators
-    MPI_Comm local = MPI_COMM_WORLD;
+    MPI_Comm local = henson_get_world();
     int rank, size;
     MPI_Comm_rank(local, &rank);
     MPI_Comm_size(local, &size);

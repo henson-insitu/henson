@@ -21,9 +21,10 @@ int main(int argc, char** argv)
     if (argc > 1)
         sleep_interval = atoi(argv[1]);
 
+    MPI_Comm world = henson_get_world();
     int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(world, &rank);
+    MPI_Comm_size(world, &size);
 
     if (henson_stop())
         return 0;
@@ -46,7 +47,7 @@ int main(int argc, char** argv)
         sum += data[i];
 
     float total_sum;
-    MPI_Reduce(&sum, &total_sum, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&sum, &total_sum, 1, MPI_FLOAT, MPI_SUM, 0, world);
     henson_save_float("sum", total_sum);
 
     if (rank == 0)

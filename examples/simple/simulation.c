@@ -13,11 +13,13 @@ int main(int argc, char** argv)
     // Under henson, MPI will be initialized before we are launched;
     // still need to initialize MPI in the stand-alone mode,
     // so initialize it if it's not already initialized
-    MPI_Init(&argc, &argv);
+    if (!henson_active())
+        MPI_Init(&argc, &argv);
 
+    MPI_Comm world = henson_get_world();
     int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_rank(world, &rank);
+    MPI_Comm_size(world, &size);
 
     size_t n = 50;
     if (argc > 1)
@@ -52,7 +54,7 @@ int main(int argc, char** argv)
         printf("[%d]: Simulation [t=%d]: sum = %f\n", rank, t, sum);
 
         float total_sum;
-        MPI_Reduce(&sum, &total_sum, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&sum, &total_sum, 1, MPI_FLOAT, MPI_SUM, 0, world);
 
         if (rank == 0)
             printf("[%d]: Simulation [t=%d]: total_sum = %f\n", rank, t, total_sum);
@@ -64,7 +66,8 @@ int main(int argc, char** argv)
         free(array);
     }
 
-    MPI_Finalize();
+    if (!henson_active())
+        MPI_Finalize();
 
     return 0;
 }

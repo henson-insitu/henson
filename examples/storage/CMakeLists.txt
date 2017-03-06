@@ -1,8 +1,8 @@
 add_executable              (storage storage.cpp)
-target_link_libraries       (storage henson_lib henson-pmpi format ${mpi_libraries})
+target_link_libraries       (storage henson_lib format ${mpi_libraries})
 
 add_executable              (compute compute.cpp)
-target_link_libraries       (compute henson_lib henson-pmpi format ${mpi_libraries})
+target_link_libraries       (compute henson_lib format ${mpi_libraries})
 
 if                          (NOT APPLE)
    set                      (linker_flags "-pie -Wl,--export-dynamic")
