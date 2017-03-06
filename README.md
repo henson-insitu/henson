@@ -24,17 +24,35 @@ See [simulation.c][] and [analysis.cpp][] in [examples/simple](examples/simple) 
 [simulation.c]:     examples/simple/simulation.c
 [analysis.cpp]:     examples/simple/analysis.cpp
 
+[ChaiScript example](examples/simple/simple.chai):
 ```
-simple.hwl:
+mpirun -n 4 henson-chai simple.chai
+
+# simple.chai
+
+var procmap = ProcMap()
+
+var sim = load("./simulation 1000", procmap)
+var ana = load("./analysis", procmap)
+
+while(sim.proceed())
+{
+    ana.proceed()
+}
+```
+
+[HWL example](examples/simple/simple.hwl):
+```
+mpirun -n 4 henson-hwl simple.hwl
+
+# simple.hwl
+
 sim = ./simulation 1000
 ana = ./analysis
 
 world while sim:
     sim
     ana
-
-
-mpirun -n 4 henson simple.hwl
 ```
 
 Other examples:
@@ -44,15 +62,15 @@ Other examples:
 
 ## Motivation
 
-We would like analysis codes to access simulation data, while the
+To avoid IO overhead, analysis codes need to access simulation data, while the
 simulation is running, without saving the data to disk. The goal is to let
-multiple independent executable share memory (e.g., exchange arrays without
+multiple independent executables share memory (e.g., exchange arrays without
 copying their contents) without modifying their memory management systems. We
 would also like to control the execution flow, for example, switching between
 simulation and analysis after every step of the simulation.
 
 **Shared address space.**
-If the executables are built as position-independent code, then their `main`s
+If the executables are built as position-independent code, then their `main` routines
 can be loaded using the [dynamic loading](https://en.wikipedia.org/wiki/Dynamic_loading) facilities `dlopen` and `dlsym`:
 
 ```{.cpp}
@@ -61,14 +79,14 @@ typedef     int  (*MainType)(int argc, char *argv[]);
 void*       lib      = dlopen(fn.c_str(), RTLD_LAZY);
 MainType    lib_main = (MainType) dlsym(lib, "main");
 ```
-The `main`s can subsequently be called from a controlling process in the
+We can subsequently call `main` routines from a controlling process, in the
 appropriate order. Since all the executables get loaded into the same address
 space, the data can be exchanged between them by simply passing pointers around
 — no copying or special tricks are required. (Achieving the same zero-copy
 between separate processes is much more complicated.)
 
 **Coroutines.**
-How can we transfer control between different `main`s?
+How can we transfer control from one `main` to another?
 A simulation may want to stop after every time-step,
 transfer control to the analysis code, but then resume where it left off
 without losing its state. Similarly, analysis may not be a single executable,
