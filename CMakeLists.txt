@@ -36,7 +36,7 @@ else()
                              COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src/restrict-world.c ${CMAKE_CURRENT_BINARY_DIR}/restrict-world.c
                              MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/src/restrict-world.c)
 endif()
-set                         (MPI_WRAPPER_SOURCES    restrict-world.c)
+add_library                 (henson-pmpi    restrict-world.c)
 endif()
 
 # DL
@@ -69,7 +69,7 @@ set                         (CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 # Format
 add_library                 (format    src/format.cc)
 
-set                         (HENSON_LIB_SOURCES src/context.cpp src/data.cpp ${MPI_WRAPPER_SOURCES} ${HENSON_LIB_SOURCES})
+set                         (HENSON_LIB_SOURCES src/context.cpp src/data.cpp ${HENSON_LIB_SOURCES})
 add_library                 (henson_lib ${HENSON_LIB_SOURCES})
 set_target_properties       (henson_lib PROPERTIES OUTPUT_NAME henson)
 if                          (use_boost)
