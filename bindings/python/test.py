@@ -2,7 +2,7 @@ import pyhenson as h
 import numpy as np
 from mpi4py import MPI
 
-w = MPI.COMM_WORLD
+w = MPI.COMM_WORLD.Dup()
 print w.rank, w.size
 
 a = MPI._addressof(w)       # required to interface with mpi4py
