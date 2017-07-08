@@ -49,7 +49,7 @@ set                         (libraries ${libraries} ${CMAKE_THREAD_LIBS_INIT})
 include_directories         (${CMAKE_CURRENT_BINARY_DIR}
                              ${CMAKE_CURRENT_SOURCE_DIR}
                              ${CMAKE_CURRENT_SOURCE_DIR}/include
-                             SYSTEM ${MPI_INCLUDE_PATH})
+                             SYSTEM ${MPI_C_INCLUDE_PATH})
 
 if                          (NOT use_boost)
     set                     (CORO_TYPE "-DCORO_SJLJ")
