@@ -19,7 +19,7 @@ static int*             stop = 0;
 
 int  henson_active()
 {
-    return (parent != 0 && local != 0);
+    return procmap != 0;
 }
 
 void henson_yield()

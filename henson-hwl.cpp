@@ -13,6 +13,7 @@
 namespace spd = spdlog;
 std::shared_ptr<spd::logger> logger;
 
+#include <henson/context.h>
 #include <henson/puppet.hpp>
 #include <henson/data.hpp>
 #include <henson/procs.hpp>
@@ -173,6 +174,7 @@ int main(int argc, char *argv[])
     h::ProcMap::Vector  procs = h::ProcMap::parse_procs(procs_sizes, size, all_group_names);
 
     h::ProcMap          procmap(world, procs);        // splits the communicator into groups
+    henson_set_procmap(&procmap);                     // "activate henson" in libhenson-pmpi.so
     if (rank == 0 && show_sizes)
     {
         fmt::print("Group sizes:\n");

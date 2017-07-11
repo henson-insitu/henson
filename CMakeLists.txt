@@ -1,5 +1,5 @@
 project                     (Henson)
-cmake_minimum_required      (VERSION 2.8.11)
+cmake_minimum_required      (VERSION 3.0)
 
 option                      (use_boost          "Use Boost.Context"              OFF)
 option                      (python             "Build Python bindings"          ON)
@@ -23,21 +23,6 @@ endif()
 # MPI
 find_package                (MPI REQUIRED)
 set                         (mpi_libraries              ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
-set                         (libraries ${libraries}     ${mpi_libraries})
-
-# MPI wrapper
-if                          (mpi-wrappers)
-if                          (regenerate-wrapper)
-    set                     (WRAP ${PROJECT_SOURCE_DIR}/src/wrap.py)
-    include                 (${PROJECT_SOURCE_DIR}/src/WrapConfig.cmake)
-    add_wrapped_file        (restrict-world.c src/restrict-world.w)
-else()
-  add_custom_command        (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/restrict-world.c
-                             COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src/restrict-world.c ${CMAKE_CURRENT_BINARY_DIR}/restrict-world.c
-                             MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/src/restrict-world.c)
-endif()
-add_library                 (henson-pmpi    restrict-world.c)
-endif()
 
 # DL
 set                         (libraries ${libraries} ${CMAKE_DL_LIBS})
@@ -77,6 +62,27 @@ if                          (use_boost)
 else()
     set_target_properties   (henson_lib PROPERTIES COMPILE_FLAGS ${CORO_TYPE})
 endif()
+
+# MPI wrapper
+if                          (mpi-wrappers)
+if                          (regenerate-wrapper)
+    set                     (WRAP ${PROJECT_SOURCE_DIR}/src/wrap.py)
+    include                 (${PROJECT_SOURCE_DIR}/src/WrapConfig.cmake)
+    add_wrapped_file        (restrict-world.c src/restrict-world.w)
+else()
+  add_custom_command        (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/restrict-world.c
+                             COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src/restrict-world.c ${CMAKE_CURRENT_BINARY_DIR}/restrict-world.c
+                             MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/src/restrict-world.c)
+endif()
+add_library                 (henson-pmpi SHARED restrict-world.c)
+target_link_libraries       (henson-pmpi henson_lib ${mpi_libraries})
+set                         (libraries ${libraries} henson-pmpi)
+add_library                 (henson-pmpi-static STATIC restrict-world.c)
+else()
+set                         (libraries ${libraries} ${mpi_libraries})
+endif()
+
+
 
 add_executable              (henson-hwl  henson-hwl.cpp)
 add_executable              (henson-chai henson-chai.cpp)

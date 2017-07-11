@@ -21,6 +21,7 @@ std::shared_ptr<spd::logger> logger;
 #include <chaiscript/chaiscript.hpp>
 #include <chaiscript/chaiscript_stdlib.hpp>
 
+#include <henson/context.h>
 #include <henson/time.hpp>
 #include <henson/procs.hpp>
 #include <henson/data.hpp>
@@ -177,6 +178,8 @@ int main(int argc, char *argv[])
 
     h::NameMap namemap;
     proc_map = std::make_shared<h::ProcMap>(world, h::ProcMap::parse_procs(procs_sizes, size));
+
+    henson_set_procmap(&*proc_map);         // "activate henson" in libhenson-pmpi.so
 
     chaiscript::ChaiScript chai(chaiscript::Std_Lib::library());
 
