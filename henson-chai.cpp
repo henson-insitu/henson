@@ -13,7 +13,8 @@
 #include <mpi.h>
 
 #include <opts/opts.h>
-#include <format.h>
+#include <fmt/format.h>
+#include <fmt/ostream.h>
 #include <spdlog/spdlog.h>
 namespace spd = spdlog;
 std::shared_ptr<spd::logger> logger;

@@ -6,7 +6,8 @@
 #include <henson/data.h>
 #include <henson/context.h>
 
-#include <format.h>
+#include <fmt/format.h>
+#include <fmt/ostream.h>
 #include <opts/opts.h>
 
 #include "common.hpp"

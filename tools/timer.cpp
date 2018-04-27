@@ -9,7 +9,8 @@ namespace h = henson;
 
 #include <henson/time.hpp>
 
-#include <format.h>
+#include <fmt/format.h>
+#include <fmt/ostream.h>
 #include <opts/opts.h>
 
 std::string     timer(std::string name)                     { return "timer_" + name; }

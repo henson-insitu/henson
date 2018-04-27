@@ -1,14 +1,11 @@
 add_executable              (send send.cpp)
-target_link_libraries       (send henson_lib format ${mpi_libraries})
-set_target_properties       (send PROPERTIES COMPILE_FLAGS "-std=c++11")
+target_link_libraries       (send henson_lib fmt ${mpi_libraries})
 
 add_executable              (receive receive.cpp)
-target_link_libraries       (receive henson_lib format ${mpi_libraries})
-set_target_properties       (receive PROPERTIES COMPILE_FLAGS "-std=c++11")
+target_link_libraries       (receive henson_lib fmt ${mpi_libraries})
 
 add_executable              (timer timer.cpp)
-target_link_libraries       (timer henson_lib format ${mpi_libraries})
-set_target_properties       (timer PROPERTIES COMPILE_FLAGS "-std=c++11")
+target_link_libraries       (timer henson_lib fmt ${mpi_libraries})
 
 if                          (NOT APPLE)
    set                      (linker_flags "-pie -Wl,--export-dynamic")

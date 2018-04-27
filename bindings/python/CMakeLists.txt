@@ -1,6 +1,6 @@
 pybind11_add_module         (pyhenson henson.cpp)
 
-target_link_libraries       (pyhenson PRIVATE format ${libraries})
+target_link_libraries       (pyhenson PRIVATE fmt ${libraries})
 if                          (use_boost)
     target_link_libraries   (pyhenson PRIVATE ${Boost_CONTEXT_LIBRARY})
     set_target_properties   (pyhenson PROPERTIES COMPILE_FLAGS "-DUSE_BOOST")

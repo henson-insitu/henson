@@ -52,7 +52,8 @@ endif()
 set                         (CMAKE_CXX_STANDARD 11)
 
 # Format
-add_library                 (format    src/format.cc)
+add_subdirectory            (ext/fmt)
+include_directories         (ext/fmt)
 
 set                         (HENSON_LIB_SOURCES src/context.cpp src/data.cpp ${HENSON_LIB_SOURCES})
 add_library                 (henson_lib ${HENSON_LIB_SOURCES})
@@ -86,8 +87,8 @@ endif()
 
 add_executable              (henson-hwl  henson-hwl.cpp)
 add_executable              (henson-chai henson-chai.cpp)
-target_link_libraries       (henson-hwl  format ${libraries})
-target_link_libraries       (henson-chai format ${libraries})
+target_link_libraries       (henson-hwl  fmt ${libraries})
+target_link_libraries       (henson-chai fmt ${libraries})
 
 if                          (use_boost)
     target_link_libraries   (henson-hwl ${Boost_CONTEXT_LIBRARY})
