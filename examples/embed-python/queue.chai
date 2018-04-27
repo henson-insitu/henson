@@ -1,0 +1,11 @@
+var procmap   = ProcMap()
+var nm        = NameMap()
+var surrogate = python("surrogate.py", procmap)
+
+surrogate.proceed()
+
+while(!nm.queue_empty("trials"))
+{
+    var id = nm.get("trials");
+    puts("Got id: ${id}\n")
+}

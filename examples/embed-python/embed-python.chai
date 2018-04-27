@@ -1,0 +1,6 @@
+var procmap = ProcMap()
+var example = python("example.py", procmap)
+example.proceed()
+puts("Back from example\n")
+example.proceed()
+puts("Back from example\n")

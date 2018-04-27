@@ -30,6 +30,9 @@ std::shared_ptr<spd::logger> logger;
 #include <henson/scheduler.hpp>
 #include <henson/command-line.hpp>
 namespace h = henson;
+#ifdef HENSON_PYTHON
+#include <henson/python-puppet.hpp>
+#endif
 
 // used for debugging of segfaults
 int rank;
@@ -186,7 +189,8 @@ int main(int argc, char *argv[])
 
     henson_set_procmap(&*proc_map);         // "activate henson" in libhenson-pmpi.so
 
-    chaiscript::ChaiScript chai(chaiscript::Std_Lib::library());
+    std::unique_ptr<chaiscript::ChaiScript> chai_ptr { new chaiscript::ChaiScript(chaiscript::Std_Lib::library()) };
+    chaiscript::ChaiScript& chai = *chai_ptr;
 
     // Puppet
     chai.add(chaiscript::user_type<h::Puppet>(),        "Puppet");
@@ -210,6 +214,25 @@ int main(int argc, char *argv[])
                                            pm,
                                            &namemap);
     }), "load");
+
+#ifdef HENSON_PYTHON
+    // PythonPuppet
+    chai.add(chaiscript::user_type<h::PythonPuppet>(),  "PythonPuppet");
+    chai.add(chaiscript::fun([](h::PythonPuppet& puppet)
+    {
+        active_puppet = puppet.puppet_name_;
+        logger->debug("Proceeding with {}", puppet.puppet_name_);
+        puppet.proceed();
+        return puppet.running();
+    }), "proceed");
+    chai.add(chaiscript::fun(&h::PythonPuppet::running),      "running");
+    chai.add(chaiscript::fun(&h::PythonPuppet::signal_stop),  "signal_stop");
+    chai.add(chaiscript::fun(&h::PythonPuppet::total_time),   "total_time");
+    chai.add(chaiscript::fun([&namemap,script_prefix](std::string python_script, henson::ProcMap* pm)
+    {
+        return std::make_shared<h::PythonPuppet>(python_script, pm, &namemap);
+    }), "python");
+#endif
 
     // NameMap
     // TODO: why not just create a new namemap?
@@ -345,6 +368,7 @@ int main(int argc, char *argv[])
     {
         std::string new_string(buffered_in.begin(), buffered_in.end());
         chai.eval(new_string);
+        chai_ptr = nullptr;        // trigger destruction of all the puppets
     } catch(const std::exception& e)
     {
         logger->critical("Caught: {}", e.what());
