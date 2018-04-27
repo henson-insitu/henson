@@ -18,9 +18,9 @@ struct PyArray: public henson::Array
     std::string format;
 };
 
-PYBIND11_PLUGIN(pyhenson)
+PYBIND11_MODULE(pyhenson, m)
 {
-    py::module m("pyhenson", "Henson bindings");
+    m.doc() = "Henson bindings";
 
     using namespace henson;
 
@@ -66,7 +66,7 @@ PYBIND11_PLUGIN(pyhenson)
                             new (&pm) ProcMap(comm, v);
                          });
 
-    py::class_<PyArray>(m,   "Array")
+    py::class_<PyArray>(m,  "Array", py::buffer_protocol())
         .def_buffer([](PyArray& a) -> py::buffer_info
                     {
                         return py::buffer_info
@@ -99,6 +99,4 @@ PYBIND11_PLUGIN(pyhenson)
         .def("clear",       &NameMap::clear);
 
     m.def("clock_to_string",  &clock_to_string);
-
-    return m.ptr();
 }

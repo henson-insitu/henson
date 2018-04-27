@@ -1,5 +1,5 @@
 project                     (Henson)
-cmake_minimum_required      (VERSION 3.0)
+cmake_minimum_required      (VERSION 3.1)
 
 option                      (use_boost          "Use Boost.Context"              OFF)
 option                      (python             "Build Python bindings"          ON)
@@ -49,7 +49,7 @@ if                          (NOT use_boost)
     set                     (HENSON_LIB_SOURCES src/coro.c)
 endif()
 
-set                         (CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
+set                         (CMAKE_CXX_STANDARD 11)
 
 # Format
 add_library                 (format    src/format.cc)
@@ -117,5 +117,6 @@ add_subdirectory            (examples/queue)
 add_subdirectory            (tools)
 
 if                          (python)
+    add_subdirectory        (ext/pybind11)
     add_subdirectory        (bindings/python)
 endif                       (python)
