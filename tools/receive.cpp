@@ -26,13 +26,15 @@
 int main(int argc, char** argv)
 {
     using namespace opts;
-    Options ops(argc,argv);
+    Options ops;
 
-    bool async = ops >> Present('a', "async", "asynchronous mode");
+    bool async, help;
+    ops
+        >> Option('a', "async", async, "asynchronous mode")
+        >> Option('h', "help",  help,  "show help");
 
     std::string remote_group;
-    if (  ops >> Present('h', "help", "show help")    ||
-        !(ops >> PosOption(remote_group)))
+    if (!ops.parse(argc,argv) || help || !(ops >> PosOption(remote_group)))
     {
         fmt::print("Usage: {} REMOTE_GROUP [variables]+\n{}", argv[0], ops);
         return 1;

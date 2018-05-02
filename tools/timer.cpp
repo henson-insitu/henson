@@ -37,10 +37,13 @@ int main(int argc, char** argv)
     MPI_Comm_rank(world, &rank);
 
     using namespace opts;
-    Options ops(argc, argv);
+    Options ops;
 
-    bool increment = ops >> Present('i', "increment", "increment the timer value");
-    bool root      = ops >> Present('r', "root",      "perform comparison on the root node only (and broadcast decision to the rest)");
+    bool increment, root;
+    ops
+        >> Option('i', "increment", increment,  "increment the timer value")
+        >> Option('r', "root",      root,       "perform comparison on the root node only (and broadcast decision to the rest)");
+    ops.parse(argc, argv);
 
     std::string cmd;
     ops >> PosOption(cmd);
@@ -48,7 +51,6 @@ int main(int argc, char** argv)
     {
         std::string name;
         ops >> PosOption(name);
-
 
         save_time(timer_start(name), henson::get_time());
     } else if (cmd == "stop")

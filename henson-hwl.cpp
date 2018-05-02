@@ -112,17 +112,33 @@ int main(int argc, char *argv[])
 
     std::vector<std::string>    procs_sizes;
     std::string                 log_level = "info";
+    bool show_sizes, verbose, times, every_iteration, help;
+
     using namespace opts;
-    Options ops(argc, argv);
+    Options ops;
     ops
-        >> Option('p', "procs", procs_sizes, "number of processors to use for a control group")
-        >> Option('l', "log",   log_level,   "log level to use")
+        >> Option('p', "procs",      procs_sizes,       "number of processors to use for a control group")
+        >> Option('l', "log",        log_level,         "log level to use")
+        >> Option('s', "show-sizes", show_sizes,        "show group sizes")
+        >> Option('v', "verbose",    verbose,           "verbose output")
+        >> Option('t', "show-times", times,             "show time spent in each puppet")
+        >> Option("every-iteration", every_iteration,   "report times at every iteration")
+        >> Option('h', "help",       help,              "show help")
     ;
 
-    bool show_sizes = ops >> Present('s', "show-sizes", "show group sizes");
-    bool verbose    = ops >> Present('v', "verbose",    "verbose output");
-    bool times      = ops >> Present('t', "show-times", "show time spent in each puppet");
-    bool every_iteration = ops >> Present("every-iteration", "report times at every iteration");
+    std::string script_fn;
+    if (!ops.parse(argc,argv) || help || !(ops >> PosOption(script_fn)))
+    {
+        if (rank == 0)
+        {
+            fmt::print("Usage: {} SCRIPT [-p group=SIZE]* [variable=value]*\n\n", argv[0]);
+            fmt::print("Execute SCRIPT. procs are the names of execution groups in the script.\n");
+            fmt::print("Leftover processors get split evenly among the execution groups in the SCRIPT\n");
+            fmt::print("but not specified in the procs list.\n\n");
+            fmt::print("{}", ops);
+        }
+        return 1;
+    }
 
     logger = spd::stderr_logger_st("console");
     logger->set_level(spd::level::off);
@@ -137,21 +153,6 @@ int main(int argc, char *argv[])
 
     if (verbose || rank == 0)
         logger->info("henson started; total processes = {}", size);
-
-    std::string script_fn;
-    if (  ops >> Present('h', "help", "show help") ||
-        !(ops >> PosOption(script_fn)))
-    {
-        if (rank == 0)
-        {
-            fmt::print("Usage: {} SCRIPT [-p group=SIZE]* [variable=value]*\n\n", argv[0]);
-            fmt::print("Execute SCRIPT. procs are the names of execution groups in the script.\n");
-            fmt::print("Leftover processors get split evenly among the execution groups in the SCRIPT\n");
-            fmt::print("but not specified in the procs list.\n\n");
-            fmt::print("{}", ops);
-        }
-        return 1;
-    }
 
     // parse the script
     hwl::Script script;

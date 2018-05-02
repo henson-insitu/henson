@@ -14,13 +14,15 @@
 int main(int argc, char** argv)
 {
     using namespace opts;
-    Options ops(argc,argv);
+    Options ops;
 
-    bool stop = ops >> Present('s', "stop", "signal remote storage to stop the execution");
+    bool stop, help;
+    ops
+        >> Option('s', "stop", stop, "signal remote storage to stop the execution")
+        >> Option('h', "help", help, "show help");
 
     std::string remote_group;
-    if (  ops >> Present('h', "help", "show help")    ||
-        !(ops >> PosOption(remote_group)))
+    if (!ops.parse(argc,argv) || help || !(ops >> PosOption(remote_group)))
     {
         fmt::print("Usage: {} REMOTE_GROUP\n{}", argv[0], ops);
         return 1;

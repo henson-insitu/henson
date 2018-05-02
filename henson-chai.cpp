@@ -131,15 +131,31 @@ int main(int argc, char *argv[])
     std::vector<std::string>    procs_sizes;
     std::vector<std::string>    variables;
     std::string                 log_level = "info";
+    bool verbose, help;
+
     using namespace opts;
-    Options ops(argc, argv);
+    Options ops;
     ops
         >> Option('p', "procs", procs_sizes, "number of processors to use for a control group")
         >> Option('v', "var",   variables,   "define variables to inject into the script")
         >> Option('l', "log",   log_level,   "log level to use")
+        >> Option("verbose",    verbose,     "verbose output")
+        >> Option('h', "help",  help,        "show help")
     ;
 
-    bool verbose    = ops >> Present("verbose",    "verbose output");
+    std::string script_fn;
+    if (!ops.parse(argc,argv) || help || !(ops >> PosOption(script_fn)))
+    {
+        if (rank == 0)
+        {
+            fmt::print("Usage: {} SCRIPT [-p group=SIZE]*\n\n", argv[0]);
+            fmt::print("Execute SCRIPT. procs are the names of execution groups in the script.\n");
+            fmt::print("Leftover processors get split evenly among the execution groups in the SCRIPT\n");
+            fmt::print("but not specified in the procs list.\n\n");
+            fmt::print("{}", ops);
+        }
+        return 1;
+    }
 
     logger = spd::stderr_logger_st("henson");
     logger->set_level(spd::level::warn);
@@ -158,21 +174,6 @@ int main(int argc, char *argv[])
 
     if (verbose || rank == 0)
         logger->info("henson started; total processes = {}", size);
-
-    std::string script_fn;
-    if (  ops >> Present('h', "help", "show help") ||
-        !(ops >> PosOption(script_fn)))
-    {
-        if (rank == 0)
-        {
-            fmt::print("Usage: {} SCRIPT [-p group=SIZE]*\n\n", argv[0]);
-            fmt::print("Execute SCRIPT. procs are the names of execution groups in the script.\n");
-            fmt::print("Leftover processors get split evenly among the execution groups in the SCRIPT\n");
-            fmt::print("but not specified in the procs list.\n\n");
-            fmt::print("{}", ops);
-        }
-        return 1;
-    }
 
     // figure out the prefix
     std::string script_prefix = h::prefix(script_fn);
