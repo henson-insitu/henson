@@ -175,6 +175,9 @@ int main(int argc, char *argv[])
     if (verbose || rank == 0)
         logger->info("henson started; total processes = {}", size);
 
+    if (procs_sizes.empty())
+        logger->warn("No procs specified on the command line");
+
     // figure out the prefix
     std::string script_prefix = h::prefix(script_fn);
 
