@@ -4,14 +4,10 @@
 #include <pybind11/embed.h>
 namespace py = pybind11;
 
-#ifdef USE_BOOST
-#include <boost/context/all.hpp>
-#else
-#include <coro.h>
-#endif
-
 #include <spdlog/spdlog.h>
 namespace spd = spdlog;
+
+#include "coroutine.hpp"
 
 namespace henson
 {
@@ -19,29 +15,15 @@ namespace henson
 namespace bc = boost::context;
 #endif
 
-struct PythonPuppet
+struct PythonPuppet: public Coroutine<PythonPuppet>
 {
-#ifdef USE_BOOST
-    typedef             bc::fcontext_t      context_t;
-#else
-    typedef             coro_context        context_t;
-#endif
+    using Parent = Coroutine<PythonPuppet>;
 
                         PythonPuppet(const std::string& filename, ProcMap* procmap, NameMap* namemap):
+                            Parent(filename_),
                             filename_(filename), procmap_(procmap), namemap_(namemap)
-                        {
-                            puppet_name_ = filename_;
-#ifdef USE_BOOST
-                            stack_ = allocator_.allocate();
-                            to_ = bc::make_fcontext(stack_.sp, stack_.size, exec);
-#else
-                            coro_stack_alloc(&stack_, 8*1024*1024);     // 8MB stack
-                            coro_create(&to_, exec, this, stack_.sptr, stack_.ssze);
-                            coro_create(&from_, NULL, NULL, NULL, 0);
-#endif
-                        }
+                        {}
 
-#ifdef USE_BOOST
                         ~PythonPuppet()
                         {
                             if(running_)
@@ -49,48 +31,9 @@ struct PythonPuppet
                                 signal_stop();
                                 proceed();
                             }
-
-                            allocator_.deallocate(stack_);
                         }
-    void                proceed()               { start_time_ = get_time(); bc::jump_fcontext(&from_, to_, (intptr_t) this); time_type diff = get_time() - start_time_; total_time_ += diff; }
-    void                yield()                 { bc::jump_fcontext(&to_, from_, 0); }
 
-#else
-                        ~PythonPuppet()
-                        {
-                            if(running_)
-                            {
-                                signal_stop();
-                                proceed();
-                            }
-
-                            coro_stack_free(&stack_);
-                        }
-    void                proceed()               { start_time_ = get_time(); coro_transfer(&from_, &to_); time_type diff = get_time() - start_time_; total_time_ += diff; }
-    void                yield()                 { coro_transfer(&to_, &from_); }
-#endif
-
-
-    // can't even move a puppet since the addresses of its from_ and to_ fields
-    // are stored in the modules (saved via henson_set_context, in the constructor above)
-                        PythonPuppet(const PythonPuppet&)   =delete;
-                        PythonPuppet(PythonPuppet&&)        =delete;
-
-    PythonPuppet&       operator=(const PythonPuppet&)=delete;
-    PythonPuppet&       operator=(PythonPuppet&&)     =delete;
-
-    void                signal_stop()           { stop_ = 1; }
-
-    bool                running() const         { return running_; }
-    int                 result() const          { return result_; }
-
-    time_type           total_time() const      { return total_time_; }
-
-#if USE_BOOST
-    static void         exec(intptr_t self_)
-#else
-    static void         exec(void* self_)
-#endif
+    static void         exec(exec_t self_)
     {
         PythonPuppet* self = (PythonPuppet*) self_;
 
@@ -119,27 +62,11 @@ struct PythonPuppet
         }
     }
 
-#ifdef USE_BOOST
-    bc::stack_context   stack_;
-    bc::fixedsize_stack allocator_;
-#else
-    coro_stack          stack_;
-#endif
-
     py::scoped_interpreter  guard_;
 
     std::string         filename_;
     ProcMap*            procmap_;
     NameMap*            namemap_;
-
-    context_t           from_, to_;
-    bool                running_ = false;
-    int                 stop_ = 0;
-    int                 result_ = -1;
-
-    time_type           start_time_;
-    time_type           total_time_ = 0;
-    std::string         puppet_name_;
 
     std::shared_ptr<spd::logger> log_ = spd::get("henson");
 };

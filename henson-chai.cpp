@@ -196,8 +196,8 @@ int main(int argc, char *argv[])
     chai.add(chaiscript::user_type<h::Puppet>(),        "Puppet");
     chai.add(chaiscript::fun([](h::Puppet& puppet)
     {
-        active_puppet = puppet.puppet_name_;
-        logger->debug("Proceeding with {}", puppet.puppet_name_);
+        active_puppet = puppet.name();
+        logger->debug("Proceeding with {}", puppet.name());
         puppet.proceed();
         return puppet.running();
     }), "proceed");
@@ -220,8 +220,8 @@ int main(int argc, char *argv[])
     chai.add(chaiscript::user_type<h::PythonPuppet>(),  "PythonPuppet");
     chai.add(chaiscript::fun([](h::PythonPuppet& puppet)
     {
-        active_puppet = puppet.puppet_name_;
-        logger->debug("Proceeding with {}", puppet.puppet_name_);
+        active_puppet = puppet.name();
+        logger->debug("Proceeding with {}", puppet.name());
         puppet.proceed();
         return puppet.running();
     }), "proceed");
