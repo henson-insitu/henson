@@ -47,12 +47,12 @@ class Scheduler
             std::string                 function;
             chaiscript::Boxed_Value     arg;
             ProcMap::Vector             groups;
-            int                         size;
+            size_t                      size;
         };
 
         struct ActiveJob
         {
-            int     first, last;
+            size_t  first, last;
             double  start;
         };
 
@@ -135,7 +135,7 @@ class Scheduler
 
                     MPI_Recv(bb.data(), bb.size(), MPI_CHAR, 0, tags::job, world_, MPI_STATUS_IGNORE);
 
-                    int first, last;
+                    size_t first, last;
                     Job job;
                     henson::load(bb, first);
                     henson::load(bb, last);
@@ -196,10 +196,10 @@ class Scheduler
                 log_->info("Job {} ({}) time: {}",  x.name, x.id, x.duration);
         }
 
-        int     find_available_procs(int num_procs)
+        size_t  find_available_procs(size_t num_procs)
         {
-            int procs = 0;
-            for(int i = 1; i < available_procs_.size(); ++i)
+            size_t procs = 0;
+            for(size_t i = 1; i < available_procs_.size(); ++i)
             {
                 if (available_procs_[i])
                     procs++;
@@ -217,8 +217,8 @@ class Scheduler
             Job job = jobs_.front();
             jobs_.pop();
 
-            int first = find_available_procs(job.size);
-            int last  = first + job.size - 1;
+            size_t first = find_available_procs(job.size);
+            size_t last  = first + job.size - 1;
             log_->debug("Scheduling on {} - {}", first, last);
 
             henson::MemoryBuffer bb;
@@ -228,7 +228,7 @@ class Scheduler
 
             // TODO: replace point-to-point with a broadcast from the leader onward
             double start_time = MPI_Wtime();        // NB: timer starts at the point of sending
-            for(int i = first; i <= last; ++i)
+            for(size_t i = first; i <= last; ++i)
             {
                 MPI_Send(bb.data(), bb.size(), MPI_CHAR, i, tags::job, world_);
                 available_procs_[i] = false;
@@ -243,7 +243,7 @@ class Scheduler
         void    signal_stop()
         {
             // TODO: Replace with a reduction
-            for(int i = 1; i < available_procs_.size(); i++)
+            for(size_t i = 1; i < available_procs_.size(); i++)
                 MPI_Send(nullptr, 0, MPI_INT, i, tags::stop, world_);
         }
 
@@ -282,20 +282,20 @@ class Scheduler
                 active_jobs_.erase(id);
                 log_->debug("Received answer from {}; name = {} ({}), procs = {} - {}", from, name, id, aj.first, aj.last);
 
-                for (int i = aj.first; i <= aj.last; ++i)
+                for (size_t i = aj.first; i <= aj.last; ++i)
                     available_procs_[i] = true;
 
                 job_times_.push_back(TimeRecord { id, name, end_time - aj.start });
             }
         }
 
-        static void create_group(int first, int last, MPI_Comm parent_comm, MPI_Group* new_group)
+        static void create_group(size_t first, size_t last, MPI_Comm parent_comm, MPI_Group* new_group)
         {
             MPI_Group parent_group;
             MPI_Comm_group(parent_comm, &parent_group);
 
             std::vector<int> group_array(last - first + 1, -1);
-            for(int i = 0; i < group_array.size(); ++i)
+            for(size_t i = 0; i < group_array.size(); ++i)
                 group_array[i] = first + i;
 
             MPI_Group_incl(parent_group, group_array.size(), group_array.data(), new_group);

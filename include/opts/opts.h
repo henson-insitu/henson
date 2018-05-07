@@ -138,7 +138,7 @@ struct BasicOption
     }
 
     virtual bool    flag() const                                { return false; }
-    virtual bool    parse(std::size_t argc, char** argv, std::size_t& i, std::size_t j);
+    virtual bool    parse(int argc, char** argv, int& i, int j);
     virtual bool    set(std::string arg) =0;
 
     char            s;
@@ -183,7 +183,7 @@ struct OptionContainer<bool>: public BasicOption
                         BasicOption(s_, l_, "", "", help_),
                         var(&var_)                          { *var = false; }
 
-    bool            parse(std::size_t, char**, std::size_t&, std::size_t) override  { *var = true; return true; }
+    bool            parse(int, char**, int&, int) override                          { *var = true; return true; }
     bool            set(std::string) override                                       { return true; }
     bool            flag() const override                                           { return true; }
 
@@ -325,7 +325,7 @@ struct Options
 };
 
 bool
-BasicOption::parse(std::size_t argc, char** argv, std::size_t& i, std::size_t j)
+BasicOption::parse(int argc, char** argv, int& i, int j)
 {
     char* argument;
     // -v...
@@ -373,7 +373,7 @@ Options::parse(int argc, char** argv)
         long_opts[opt->l] = opt.get();
     }
 
-    for (std::size_t i = 1; i < argc; ++i)
+    for (int i = 1; i < argc; ++i)
     {
         if( argv[ i ][ 0 ] == '\0' )
             continue;
@@ -429,7 +429,7 @@ Options::parse(int argc, char** argv)
 
                     // -fgh
                     char c;
-                    for(std::size_t j = 1; (c = argv[i][j]) != '\0'; ++j)
+                    for(int j = 1; (c = argv[i][j]) != '\0'; ++j)
                     {
                         if (!std::isprint(c) || c == '-')
                         {

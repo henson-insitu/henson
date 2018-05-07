@@ -5,6 +5,8 @@
 
 #include <sys/time.h>
 
+#include <fmt/format.h>
+
 #ifdef __MACH__
 #include <mach/clock.h>
 #include <mach/mach.h>
@@ -42,13 +44,11 @@ std::string
 clock_to_string(time_type time)
 {
     time /= 1000;       // microsecond
-    char buf[16];       // +1 for the trailing null
-    sprintf(buf, "%02llu:%02llu:%02llu.%06llu",
-            time/1000000/60/60,
-            time/1000000/60 % 60,
-            time/1000000 % 60,
-            time % 1000000);
-    return buf;
+    return fmt::format("{:02}:{:02}:{:02}.{:06}",
+                        time/1000000/60/60,
+                        time/1000000/60 % 60,
+                        time/1000000 % 60,
+                        time % 1000000);
 }
 
 }
