@@ -120,8 +120,6 @@ int main(int argc, char *argv[])
 {
     signal(SIGSEGV, catch_sig);     // catch segfault
 
-    h::time_type start_time = h::get_time();
-
     h::MPIEnvironment mpi_env(&argc, &argv);    // RAII
 
     MPI_Comm world;

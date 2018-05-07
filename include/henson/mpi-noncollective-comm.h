@@ -9,7 +9,7 @@
 // Implements algorithm from "Noncollective Communicator Creation in MPI" by Dinan et al.
 inline void non_collective_comm_create(MPI_Group the_group, MPI_Comm parent_comm, int tag, MPI_Comm* new_comm)
 {
-    int parent_rank, group_rank, group_size;
+    int group_rank, group_size;
     MPI_Group parent_group;
 
     MPI_Group_rank(the_group, &group_rank);
