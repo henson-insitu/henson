@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(world, &rank);
     MPI_Comm_size(world, &size);
 
-    std::vector<std::string>    procs_sizes;
+    std::vector<std::string>    procs_sizes { "world" };
     std::vector<std::string>    variables;
     std::string                 log_level = "info";
     bool verbose, help;
