@@ -18,8 +18,33 @@ namespace henson
 namespace bc = boost::context;
 #endif
 
+struct BaseCoroutine
+{
+                        BaseCoroutine(const std::string& name):
+                            name_(name)         {}
+
+    void                signal_stop()           { stop_ = 1; }
+
+    bool                running() const         { return running_; }
+    int                 result() const          { return result_; }
+
+    time_type           total_time() const      { return total_time_; }
+
+    const std::string&  name() const            { return name_; }
+
+
+    std::string         name_;
+
+    bool                running_ = false;
+    int                 stop_ = 0;
+    int                 result_ = -1;
+
+    time_type           start_time_;
+    time_type           total_time_ = 0;
+};
+
 template<class Derived>
-struct Coroutine
+struct Coroutine: public BaseCoroutine
 {
 #ifdef USE_BOOST
     using context_t = bc::fcontext_t;
@@ -30,7 +55,7 @@ struct Coroutine
 #endif
 
                         Coroutine(const std::string& name):
-                            name_(name)
+                            BaseCoroutine(name)
                         {
 #ifdef USE_BOOST
                             stack_ = allocator_.allocate();
@@ -80,18 +105,6 @@ struct Coroutine
     Coroutine&          operator=(const Coroutine&)     =delete;
     Coroutine&          operator=(Coroutine&&)          =delete;
 
-    void                signal_stop()           { stop_ = 1; }
-
-    bool                running() const         { return running_; }
-    int                 result() const          { return result_; }
-
-    time_type           total_time() const      { return total_time_; }
-
-    const std::string&  name() const            { return name_; }
-
-
-    std::string         name_;
-
 #ifdef USE_BOOST
     bc::stack_context   stack_;
     bc::fixedsize_stack allocator_;
@@ -100,12 +113,6 @@ struct Coroutine
 #endif
 
     context_t           from_, to_;
-    bool                running_ = false;
-    int                 stop_ = 0;
-    int                 result_ = -1;
-
-    time_type           start_time_;
-    time_type           total_time_ = 0;
 };
 
 }

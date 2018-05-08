@@ -191,6 +191,7 @@ int main(int argc, char *argv[])
     chaiscript::ChaiScript& chai = *chai_ptr;
 
     // Puppet
+    chai.add(chaiscript::base_class<h::BaseCoroutine, h::Puppet>());
     chai.add(chaiscript::user_type<h::Puppet>(),        "Puppet");
     chai.add(chaiscript::fun([](h::Puppet& puppet)
     {
@@ -215,6 +216,7 @@ int main(int argc, char *argv[])
 
 #ifdef HENSON_PYTHON
     // PythonPuppet
+    chai.add(chaiscript::base_class<h::BaseCoroutine, h::PythonPuppet>());
     chai.add(chaiscript::user_type<h::PythonPuppet>(),  "PythonPuppet");
     chai.add(chaiscript::fun([](h::PythonPuppet& puppet)
     {
@@ -223,9 +225,6 @@ int main(int argc, char *argv[])
         puppet.proceed();
         return puppet.running();
     }), "proceed");
-    chai.add(chaiscript::fun(&h::PythonPuppet::running),      "running");
-    chai.add(chaiscript::fun(&h::PythonPuppet::signal_stop),  "signal_stop");
-    chai.add(chaiscript::fun(&h::PythonPuppet::total_time),   "total_time");
     chai.add(chaiscript::fun([&namemap,script_prefix](std::string python_script, henson::ProcMap* pm)
     {
         return std::make_shared<h::PythonPuppet>(python_script, pm, &namemap);
