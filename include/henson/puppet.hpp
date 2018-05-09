@@ -49,6 +49,8 @@ struct Puppet: public Coroutine<Puppet>
 
                             void* lib = dlopen(fn.c_str(), RTLD_LAZY);
                             lib_ = lib;
+                            if (lib == NULL)
+                                throw std::runtime_error(fmt::format("Could not load {}\n{}\n", fn, dlerror()));
 
                             main_ = get_function<MainType>(lib, "main");
 
