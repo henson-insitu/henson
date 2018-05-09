@@ -17,15 +17,18 @@ static henson::ProcMap* procmap = 0;
 
 static int*             stop = 0;
 
+__attribute__ ((visibility ("hidden")))
 int  henson_active()
 {
     return procmap != 0;
 }
 
+__attribute__ ((visibility ("hidden")))
 void henson_yield()
 {
     if (parent == 0 || local == 0)      // not running under henson; do nothing
         return;
+
 #ifdef USE_BOOST
     boost::context::jump_fcontext(local, *parent, 0);
 #else
@@ -44,6 +47,7 @@ void henson_set_procmap(void* pm)
     procmap = static_cast<henson::ProcMap*>(pm);
 }
 
+__attribute__ ((visibility ("hidden")))
 MPI_Comm henson_get_world()
 {
     if (!procmap)
@@ -52,11 +56,13 @@ MPI_Comm henson_get_world()
         return procmap->local();
 }
 
+__attribute__ ((visibility ("hidden")))
 MPI_Comm    henson_get_intercomm(const char* to)
 {
     return procmap->intercomm(to);
 }
 
+__attribute__ ((visibility ("hidden")))
 MPI_Comm    henson_get_intracomm(const char* to)
 {
     return procmap->intracomm(to);
@@ -67,6 +73,7 @@ void        henson_set_stop(int* s)
     stop = s;
 }
 
+__attribute__ ((visibility ("hidden")))
 int         henson_stop()
 {
     if (!stop) return 0;
