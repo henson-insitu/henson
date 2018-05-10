@@ -328,6 +328,8 @@ int main(int argc, char *argv[])
     chai.add(chaiscript::fun(&h::clock_to_string),                          "clock_to_string");
     chai.add(chaiscript::fun([](bool abort_on_segfault)
                              { abort_on_segfault_ = abort_on_segfault; }),  "abort_on_segfault");
+    chai.add(chaiscript::fun([](std::string dir)
+                             { return chdir(dir.c_str()); }),               "chdir");
 
     // Read and broadcast the script
     std::vector<char> buffered_in;
