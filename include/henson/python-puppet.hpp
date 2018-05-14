@@ -11,10 +11,6 @@ namespace spd = spdlog;
 
 namespace henson
 {
-#ifdef USE_BOOST
-namespace bc = boost::context;
-#endif
-
 struct PythonPuppet: public Coroutine<PythonPuppet>
 {
     using Parent = Coroutine<PythonPuppet>;
