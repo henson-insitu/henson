@@ -23,6 +23,7 @@
 #include <map>
 #include <memory>
 #include <cctype>
+#include <functional>
 
 namespace opts {
 
