@@ -3,8 +3,11 @@
 
 #include <string>
 
+#include <spdlog/spdlog.h>
+namespace spd = spdlog;
+
 #ifdef USE_BOOST
-#include <boost/context/all.hpp>
+#include <boost/context/execution_context.hpp>
 #else
 #include <coro.h>
 #endif
@@ -47,19 +50,16 @@ template<class Derived>
 struct Coroutine: public BaseCoroutine
 {
 #ifdef USE_BOOST
-    using context_t = bc::fcontext_t;
-    using exec_t    = intptr_t;
+    using context_t = bc::execution_context<void*>;
 #else
     using context_t = coro_context;
-    using exec_t    = void*;
 #endif
 
                         Coroutine(const std::string& name):
                             BaseCoroutine(name)
                         {
 #ifdef USE_BOOST
-                            stack_ = allocator_.allocate();
-                            to_ = bc::make_fcontext(stack_.sp, stack_.size, Derived::exec);
+                            to_ = context_t(&jump_to_exec);
 #else
                             coro_stack_alloc(&stack_, 8*1024*1024);     // 8MB stack
                             coro_create(&to_, Derived::exec, this, stack_.sptr, stack_.ssze);
@@ -69,18 +69,25 @@ struct Coroutine: public BaseCoroutine
 
                         ~Coroutine()
                         {
-#ifdef USE_BOOST
-                            allocator_.deallocate(stack_);
-#else
+#ifndef USE_BOOST
                             coro_stack_free(&stack_);
 #endif
                         }
+
+#ifdef USE_BOOST
+    static void*        jump_to_exec(context_t&& from, void* self_)
+    {
+        Coroutine<Derived>* self = (Coroutine<Derived>*) self_;
+        self->from_ = std::move(from);
+        return self;
+    }
+#endif
 
     void                proceed()
     {
         start_time_ = get_time();
 #ifdef USE_BOOST
-        bc::jump_fcontext(&from_, to_, (intptr_t) this);
+        to_ = std::move(std::get<0>(to_(this)));
 #else
         coro_transfer(&from_, &to_);
 #endif
@@ -91,7 +98,7 @@ struct Coroutine: public BaseCoroutine
     void                yield()
     {
 #ifdef USE_BOOST
-        bc::jump_fcontext(&to_, from_, 0);
+        from_ = std::move(std::get<0>(from_(this)));
 #else
         coro_transfer(&to_, &from_);
 #endif
@@ -105,14 +112,13 @@ struct Coroutine: public BaseCoroutine
     Coroutine&          operator=(const Coroutine&)     =delete;
     Coroutine&          operator=(Coroutine&&)          =delete;
 
-#ifdef USE_BOOST
-    bc::stack_context   stack_;
-    bc::fixedsize_stack allocator_;
-#else
+#ifndef USE_BOOST
     coro_stack          stack_;
 #endif
 
     context_t           from_, to_;
+
+    std::shared_ptr<spd::logger> log_ = spd::get("henson");
 };
 
 }

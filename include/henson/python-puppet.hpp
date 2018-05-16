@@ -4,9 +4,6 @@
 #include <pybind11/embed.h>
 namespace py = pybind11;
 
-#include <spdlog/spdlog.h>
-namespace spd = spdlog;
-
 #include "coroutine.hpp"
 
 namespace henson
@@ -29,7 +26,7 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
                             }
                         }
 
-    static void         exec(exec_t self_)
+    static void         exec(void* self_)
     {
         PythonPuppet* self = (PythonPuppet*) self_;
 
@@ -63,8 +60,6 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
     std::string         filename_;
     ProcMap*            procmap_;
     NameMap*            namemap_;
-
-    std::shared_ptr<spd::logger> log_ = spd::get("henson");
 };
 
 struct PyArray: public Array

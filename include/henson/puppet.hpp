@@ -14,9 +14,6 @@
 
 #include <mpi.h>
 
-#include <spdlog/spdlog.h>
-namespace spd = spdlog;
-
 #include <fmt/format.h>
 #include <henson/data.hpp>
 #include <henson/procs.hpp>
@@ -83,11 +80,12 @@ struct Puppet: public Coroutine<Puppet>
                             dlclose(lib_);
                         }
 
-    static void         exec(exec_t self_)
+    static void         exec(void* self_)
     {
+        Puppet* self = (Puppet*) self_;
+
         while(true)
         {
-            Puppet* self = (Puppet*) self_;
             self->running_ = true;
             self->start_time_ = get_time();
             self->result_ = self->main_(self->argc_,&self->argv_[0]);
@@ -111,8 +109,6 @@ struct Puppet: public Coroutine<Puppet>
 
     MainType            main_;
     void*               lib_;
-
-    std::shared_ptr<spd::logger> log_ = spd::get("henson");
 };
 
 
