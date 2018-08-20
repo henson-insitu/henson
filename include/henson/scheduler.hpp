@@ -72,8 +72,8 @@ class Scheduler
             };
         };
 
-                Scheduler(MPI_Comm world,  chaiscript::ChaiScript* chai, henson::ProcMap* proc_map):
-                    world_(world), chai_(chai), proc_map_(proc_map)
+                Scheduler(MPI_Comm world,  chaiscript::ChaiScript* chai, henson::ProcMap* proc_map, int controller_ranks = 1):
+                    world_(world), chai_(chai), proc_map_(proc_map), controller_ranks_(controller_ranks)
         {
             MPI_Comm_rank(world_, &rank_);
             MPI_Comm_size(world_, &size_);
@@ -81,14 +81,25 @@ class Scheduler
             // Wait for everyone, then initialize list of available procs
             MPI_Barrier(world_);
             available_procs_.assign(size_, true);
-            available_procs_[0] = false;    // controller is always busy
+            for (int rk = 0; rk < controller_ranks_; ++rk)
+                available_procs_[rk] = false;    // controller is always busy
+
+            // create a local communicator for controller ranks
+            MPI_Comm new_comm;
+            MPI_Comm_split(world_, is_controller() ? 0 : 1, rank_, &new_comm);
+            if (is_controller())
+                proc_map_->extend(new_comm, ProcMap::Vector { { "controllers", controller_ranks_ } });
+            else
+                MPI_Comm_free(&new_comm);
         }
+
+                ~Scheduler()                { if (is_controller()) proc_map_->pop_back(); }
 
         int     size() const                { return size_; }
         int     rank() const                { return rank_; }
-        int     workers() const             { return size_ - 1; }
+        int     workers() const             { return size_ - controller_ranks_; }
         bool    job_queue_empty() const     { return jobs_.empty(); }
-        bool    is_controller() const       { return rank_ == 0; }
+        bool    is_controller() const       { return rank_ < controller_ranks_; }
 
         bool    results_empty() const       { return results_.empty(); }
         chaiscript::Boxed_Value
@@ -234,7 +245,6 @@ class Scheduler
                 available_procs_[i] = false;
             }
 
-            // TODO: this creates a problem if job names collide; might not want to do this based on names
             active_jobs_[job.id] = { first, last, start_time };
         }
 
@@ -305,8 +315,6 @@ class Scheduler
         int                                                 rank_;
         int                                                 size_;
 
-        std::vector<bool>                                   available_procs_;
-
         std::queue<Job>                                     jobs_;
         std::map<size_t, ActiveJob>                         active_jobs_;
         std::queue<chaiscript::Boxed_Value>                 results_;
@@ -315,6 +323,9 @@ class Scheduler
 
         chaiscript::ChaiScript*                             chai_;
         ProcMap*                                            proc_map_;
+
+        int                                                 controller_ranks_;
+        std::vector<bool>                                   available_procs_;
 
         std::shared_ptr<spd::logger>                        log_ = spd::get("henson");
 };

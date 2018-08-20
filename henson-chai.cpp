@@ -132,6 +132,7 @@ int main(int argc, char *argv[])
     std::vector<std::string>    procs_sizes { "world" };
     std::vector<std::string>    variables;
     std::string                 log_level = "info";
+    int                         controller_ranks = 1;
     bool verbose, help;
 
     using namespace opts;
@@ -140,6 +141,7 @@ int main(int argc, char *argv[])
         >> Option('p', "procs", procs_sizes, "number of processors to use for a control group")
         >> Option('v', "var",   variables,   "define variables to inject into the script")
         >> Option('l', "log",   log_level,   "log level to use")
+        >> Option('c', "controller", controller_ranks,  "ranks to use for scheduler controller")
         >> Option("verbose",    verbose,     "verbose output")
         >> Option('h', "help",  help,        "show help")
     ;
@@ -274,9 +276,9 @@ int main(int argc, char *argv[])
                              { pm->intercomm(to); }),                       "intercomm");
 
     // Scheduler
-    chai.add(chaiscript::fun([&chai]()
+    chai.add(chaiscript::fun([&chai,controller_ranks]()
     {
-        return std::make_shared<h::Scheduler>(proc_map->local(), &chai, proc_map.get());
+        return std::make_shared<h::Scheduler>(proc_map->local(), &chai, proc_map.get(), controller_ranks);
     }),                                                                     "Scheduler");
 
     auto clone    = chai.eval<std::function<chaiscript::Boxed_Value (const chaiscript::Boxed_Value&)>>("clone");
