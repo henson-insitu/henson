@@ -1,0 +1,67 @@
+var sched     = Scheduler()
+var procmap   = ProcMap()
+var nm        = NameMap()
+var surrogate = python("surrogate-mpi.py", procmap)
+
+def world(args)
+{
+    var procmap = ProcMap()
+    var namemap = NameMap()
+
+    var size = args[0];
+
+    var sim = load("../simple/simulation ${size}", procmap)
+    var ana = load("../simple/analysis",           procmap)
+
+    //sleep(1)    // otherwise we get the same random seed every time
+
+    sim.proceed()
+
+    while(sim.running())
+    {
+        ana.proceed()
+        sim.proceed()
+    }
+
+    // Must return or the program will hang
+    if(procmap.world_rank() == 0)
+    {
+        var sum = namemap.get("sum")
+        print("Final sum: ${sum}")
+        return sum
+    }
+}
+
+
+if (sched.is_controller())
+{
+    surrogate.proceed()
+
+    // exists to make sure it works on rank != 0
+    var i = 0;
+    while(nm.exists("trials") && !nm.queue_empty("trials"))
+    {
+        var size = nm.get("trials")
+        puts("Got size: ${size}\n")
+        sched.schedule("job-${i}", "world", [size], ["all" : 0], sched.workers())
+        i += 1
+    }
+
+    // process all scheduled jobs
+    while(sched.control() || !sched.results_empty())
+    {
+        if (!sched.results_empty())
+        {
+            var x = sched.pop()
+            print("Got result: ${x}")
+        }
+    }
+
+    if (procmap.local_rank() == 0)
+    {
+        sched.finish()
+    }
+} else
+{
+    sched.listen()
+}
