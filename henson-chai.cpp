@@ -229,6 +229,8 @@ int main(int argc, char *argv[])
     }), "proceed");
     chai.add(chaiscript::fun([&namemap,script_prefix](std::string python_script, henson::ProcMap* pm)
     {
+        if (python_script[0] != '/' && python_script[0] != '~')
+            python_script = script_prefix + python_script;
         return std::make_shared<h::PythonPuppet>(python_script, pm, &namemap);
     }), "python");
 #endif
