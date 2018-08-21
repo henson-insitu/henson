@@ -32,6 +32,8 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
 
         while(true)
         {
+            py::scoped_interpreter guard;
+
             py::object scope = py::module::import("__main__").attr("__dict__");
             scope["henson_yield"]           = py::module::import("pyhenson").attr("yield_");
             scope["henson_get_array"]       = py::module::import("pyhenson").attr("get_array");
@@ -54,8 +56,6 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
             self->yield();      // the time for the final portion will get recorded thanks to this call
         }
     }
-
-    py::scoped_interpreter  guard_;
 
     std::string         filename_;
     ProcMap*            procmap_;
