@@ -7,7 +7,7 @@
 namespace spd = spdlog;
 
 #ifdef USE_BOOST
-#include <boost/context/execution_context.hpp>
+#include <boost/context/continuation.hpp>
 #else
 #include <coro.h>
 #endif
@@ -50,7 +50,7 @@ template<class Derived>
 struct Coroutine: public BaseCoroutine
 {
 #ifdef USE_BOOST
-    using context_t = bc::execution_context<void*>;
+    using context_t = bc::continuation;
 #else
     using context_t = coro_context;
 #endif
@@ -59,7 +59,13 @@ struct Coroutine: public BaseCoroutine
                             BaseCoroutine(name)
                         {
 #ifdef USE_BOOST
-                            to_ = context_t(&jump_to_exec);
+                            to_ = bc::callcc([this](context_t&& from)
+                                  {
+                                      from_ = std::move(from);
+                                      from_ = from_.resume();
+                                      Derived::exec(this);
+                                      return std::move(from_);
+                                  });
 #else
                             coro_stack_alloc(&stack_, 8*1024*1024);     // 8MB stack
                             coro_create(&to_, Derived::exec, this, stack_.sptr, stack_.ssze);
@@ -74,20 +80,11 @@ struct Coroutine: public BaseCoroutine
 #endif
                         }
 
-#ifdef USE_BOOST
-    static void*        jump_to_exec(context_t&& from, void* self_)
-    {
-        Coroutine<Derived>* self = (Coroutine<Derived>*) self_;
-        self->from_ = std::move(from);
-        return self;
-    }
-#endif
-
     void                proceed()
     {
         start_time_ = get_time();
 #ifdef USE_BOOST
-        to_ = std::move(std::get<0>(to_(this)));
+        to_ = to_.resume();
 #else
         coro_transfer(&from_, &to_);
 #endif
@@ -98,7 +95,7 @@ struct Coroutine: public BaseCoroutine
     void                yield()
     {
 #ifdef USE_BOOST
-        from_ = std::move(std::get<0>(from_(this)));
+        from_ = from_.resume();
 #else
         coro_transfer(&to_, &from_);
 #endif
