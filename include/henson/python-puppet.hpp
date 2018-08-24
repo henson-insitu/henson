@@ -43,6 +43,7 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
             scope["henson_queue_empty"]     = py::module::import("pyhenson").attr("queue_empty");
             scope["henson_exists"]          = py::module::import("pyhenson").attr("exists");
             scope["henson_clear"]           = py::module::import("pyhenson").attr("clear");
+            scope["henson_stop"]            = py::module::import("pyhenson").attr("stop");
 
             // we can have only one PythonPuppet (otherwise scoped_interpreter
             // will complain), so there is only one pyhenson module, with only
@@ -90,6 +91,7 @@ PYBIND11_EMBEDDED_MODULE(pyhenson, m)
     };
 
     m.def("yield_",     [self]() { self()->yield(); });
+    m.def("stop",       [self]() { return self()->stop_ != 0; });
 
     // TODO: this is duplicating code with Python bindings; find a way to avoid code duplication
     py::class_<PyArray>(m,  "Array", py::buffer_protocol())
