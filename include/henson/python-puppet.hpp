@@ -52,7 +52,13 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
 
             self->running_ = true;
             self->start_time_ = get_time();
-            py::eval_file(self->filename_, scope);
+            try
+            {
+                py::eval_file(self->filename_, scope);
+            } catch (const std::exception& e)
+            {
+                self->log_->warn("Got exception from Python: {}", e.what());
+            }
             self->running_ = false;
             self->yield();      // the time for the final portion will get recorded thanks to this call
         }
