@@ -1,8 +1,10 @@
+import pyhenson as h
+
 print("Hello from example")
 
 a = 5
 
-henson_yield()
+h.yield_()
 
 print("Back in example")
 print(a + 2)

@@ -1,3 +1,4 @@
-henson_create_queue("trials")
-henson_add("trials", 6)
-henson_add("trials", 10)
+import pyhenson as h
+h.create_queue("trials")
+h.add("trials", 6)
+h.add("trials", 10)

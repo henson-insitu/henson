@@ -34,17 +34,6 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
         {
             py::scoped_interpreter guard;
 
-            py::object scope = py::module::import("__main__").attr("__dict__");
-            scope["henson_yield"]           = py::module::import("pyhenson").attr("yield_");
-            scope["henson_get_array"]       = py::module::import("pyhenson").attr("get_array");
-            scope["henson_get"]             = py::module::import("pyhenson").attr("get");
-            scope["henson_add"]             = py::module::import("pyhenson").attr("add");
-            scope["henson_create_queue"]    = py::module::import("pyhenson").attr("create_queue");
-            scope["henson_queue_empty"]     = py::module::import("pyhenson").attr("queue_empty");
-            scope["henson_exists"]          = py::module::import("pyhenson").attr("exists");
-            scope["henson_clear"]           = py::module::import("pyhenson").attr("clear");
-            scope["henson_stop"]            = py::module::import("pyhenson").attr("stop");
-
             // we can have only one PythonPuppet (otherwise scoped_interpreter
             // will complain), so there is only one pyhenson module, with only
             // one self to modify
@@ -54,7 +43,7 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
             self->start_time_ = get_time();
             try
             {
-                py::eval_file(self->filename_, scope);
+                py::eval_file(self->filename_);
             } catch (const py::error_already_set& e)
             {
                 self->log_->info("Caught error_already_set (maybe SystemExit; check debug channel for details)");
