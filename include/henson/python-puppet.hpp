@@ -13,7 +13,7 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
     using Parent = Coroutine<PythonPuppet>;
 
                         PythonPuppet(const std::string& filename, ProcMap* procmap, NameMap* namemap):
-                            Parent(filename_),
+                            Parent(filename),
                             filename_(filename), procmap_(procmap), namemap_(namemap)
                         {}
 
