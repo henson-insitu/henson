@@ -55,7 +55,12 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
             try
             {
                 py::eval_file(self->filename_, scope);
-            } catch (const std::exception& e)
+            } catch (const py::error_already_set& e)
+            {
+                self->log_->info("Caught error_already_set (maybe SystemExit; check debug channel for details)");
+                self->log_->debug("  {}", e.what());
+            }
+            catch (const std::exception& e)
             {
                 self->log_->warn("Got exception from Python: {}", e.what());
             }
