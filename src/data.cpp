@@ -14,7 +14,7 @@ void
 henson_save_array(const char* name, void* address, size_t type, size_t count, size_t stride)
 {
     if (!namemap) return;
-    henson::Value v; v.tag = v._array; v.a = henson::Array(address, type, count, stride);
+    henson::Value v = henson::Array(address, type, count, stride);
     namemap->add(name, v);
 }
 
@@ -23,7 +23,7 @@ henson_load_array(const char* name, void** address, size_t* type, size_t* count,
 {
     if (!namemap) return;
 
-    henson::Array a = namemap->get(name).a;
+    henson::Array a = mpark::get<henson::Array>(namemap->get(name));
     *address = a.address;
     *type    = a.type;
     *count   = a.count;
@@ -34,7 +34,7 @@ void
 henson_save_pointer(const char* name, void* ptr)
 {
     if (!namemap) return;
-    henson::Value v; v.tag = v._ptr; v.p = ptr;
+    henson::Value v = ptr;
     namemap->add(name, v);
 }
 
@@ -42,14 +42,14 @@ void
 henson_load_pointer(const char* name, void** ptr)
 {
     if (!namemap) return;
-    *ptr = namemap->get(name).p;
+    *ptr = mpark::get<void*>(namemap->get(name));
 }
 
 void
 henson_save_size_t(const char* name, size_t  x)
 {
     if (!namemap) return;
-    henson::Value v; v.tag = v._size_t; v.s = x;
+    henson::Value v = x;
     namemap->add(name, v);
 }
 
@@ -57,14 +57,14 @@ void
 henson_load_size_t(const char* name, size_t* x)
 {
     if (!namemap) return;
-    *x = namemap->get(name).s;
+    *x = mpark::get<size_t>(namemap->get(name));
 }
 
 void
 henson_save_int(const char* name, int  x)
 {
     if (!namemap) return;
-    henson::Value v; v.tag = v._int; v.i = x;
+    henson::Value v = x;
     namemap->add(name, v);
 }
 
@@ -72,14 +72,14 @@ void
 henson_load_int(const char* name, int* x)
 {
     if (!namemap) return;
-    *x = namemap->get(name).i;
+    *x = mpark::get<int>(namemap->get(name));
 }
 
 void
 henson_save_float(const char* name, float  x)
 {
     if (!namemap) return;
-    henson::Value v; v.tag = v._float; v.f = x;
+    henson::Value v = x;
     namemap->add(name, v);
 }
 
@@ -87,14 +87,14 @@ void
 henson_load_float(const char* name, float* x)
 {
     if (!namemap) return;
-    *x = namemap->get(name).f;
+    *x = mpark::get<float>(namemap->get(name));
 }
 
 void
 henson_save_double(const char* name, double  x)
 {
     if (!namemap) return;
-    henson::Value v; v.tag = v._double; v.d = x;
+    henson::Value v = x;
     namemap->add(name, v);
 }
 
@@ -102,7 +102,7 @@ void
 henson_load_double(const char* name, double* x)
 {
     if (!namemap) return;
-    *x = namemap->get(name).d;
+    *x = mpark::get<double>(namemap->get(name));
 }
 
 void

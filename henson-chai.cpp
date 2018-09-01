@@ -235,6 +235,10 @@ int main(int argc, char *argv[])
     }), "python");
 #endif
 
+    // Array
+    chai.add(chaiscript::user_type<h::Array>(), "Array");
+    chai.add(chaiscript::bootstrap::basic_constructors<h::Array>("Array"));
+
     // NameMap
     // TODO: why not just create a new namemap?
     chai.add(chaiscript::fun([&namemap] () { return &namemap; }), "NameMap");
@@ -242,27 +246,24 @@ int main(int argc, char *argv[])
     // NB: not exposed to chai: arrays
     chai.add(chaiscript::fun([](henson::NameMap* namemap, std::string name)
     {
+        using BV = chaiscript::Boxed_Value;
         henson::Value val = namemap->get(name);
-        if(val.tag == val._int)
-            return chaiscript::Boxed_Value(val.i);
-        else if(val.tag == val._double)
-            return chaiscript::Boxed_Value(val.d);
-        else if(val.tag == val._float)
-            return chaiscript::Boxed_Value(val.f);
-        else if(val.tag == val._size_t)
-            return chaiscript::Boxed_Value(val.s);
-        else if(val.tag == val._ptr)
-            return chaiscript::Boxed_Value((intptr_t) val.p);
-        else
+        struct extract
         {
-            throw std::runtime_error("Error: namemap value (" + name + ") was not an accepted type, or may not exist");
-            return chaiscript::Boxed_Value();
-        }
+            BV operator()(int x) const      { return BV(x); }
+            BV operator()(size_t x) const   { return BV(x); }
+            BV operator()(float x) const    { return BV(x); }
+            BV operator()(double x) const   { return BV(x); }
+            BV operator()(void* x) const    { return BV((intptr_t) x); }
+            BV operator()(h::Array x) const { return BV(x); }
+        };
+        return mpark::visit(extract{}, val);
     }), "get");
-    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, int x)    { h::Value v; v.tag = h::Value::_int;    v.i = x; namemap->add(name, v); }), "add");
-    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, size_t x) { h::Value v; v.tag = h::Value::_size_t; v.s = x; namemap->add(name, v); }), "add");
-    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, float x)  { h::Value v; v.tag = h::Value::_float;  v.f = x; namemap->add(name, v); }), "add");
-    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, double x) { h::Value v; v.tag = h::Value::_double; v.d = x; namemap->add(name, v); }), "add");
+    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, int x)       { h::Value v = x; namemap->add(name, v); }), "add");
+    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, size_t x)    { h::Value v = x; namemap->add(name, v); }), "add");
+    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, float x)     { h::Value v = x; namemap->add(name, v); }), "add");
+    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, double x)    { h::Value v = x; namemap->add(name, v); }), "add");
+    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, h::Array x)  { h::Value v = x; namemap->add(name, v); }), "add");
     chai.add(chaiscript::fun(&h::NameMap::create_queue),                    "create_queue");
     chai.add(chaiscript::fun(&h::NameMap::queue_empty),                     "queue_empty");
     chai.add(chaiscript::fun(&h::NameMap::exists),                          "exists");

@@ -31,7 +31,7 @@ namespace henson
         {
             enum
             {
-                int_, float_, double_, size_t_, string_, vector_, undef_
+                int_, float_, double_, size_t_, string_, array_, vector_, undef_
             };
         };
 
@@ -61,6 +61,10 @@ namespace henson
             {
                 henson::save(bb, tags::vector_);
                 henson::save(bb, chaiscript::boxed_cast<std::vector<chaiscript::Boxed_Value>>(bv));
+            } else if (detail::is_boxed<Array>(bv))
+            {
+                henson::save(bb, tags::array_);
+                henson::save(bb, chaiscript::boxed_cast<Array>(bv));
             } else if (bv.get_type_info().is_undef())
                 henson::save(bb, tags::undef_);
             else
@@ -101,6 +105,11 @@ namespace henson
                 std::vector<chaiscript::Boxed_Value> v;
                 henson::load(bb, v);
                 bv = chaiscript::Boxed_Value(v);
+            } else if (tag == tags::array_)
+            {
+                Array a;
+                henson::load(bb, a);
+                bv = chaiscript::Boxed_Value(a);
             } else if (tag == tags::undef_)
                 bv = chaiscript::Boxed_Value();
             else

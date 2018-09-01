@@ -17,8 +17,8 @@ ana = h.Puppet('../../examples/simple/analysis',   [],       pm, nm)
 sim.proceed()
 ana.proceed()
 while sim.running():
-    a = nm.get_array("data", 'f')       # f means, we expect this to be an array of floats
-    t = nm.get('t', 'i')
+    a = nm.get("data")
+    t = nm.get('t')
     print("[%d]: From Python: %d -> %f" % (w.rank, t, np.sum(a)))
     sim.proceed()
     ana.proceed()

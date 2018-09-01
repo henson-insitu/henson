@@ -3,6 +3,7 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/numpy.h>
 namespace py = pybind11;
 
 #include <henson/puppet.hpp>
@@ -10,13 +11,6 @@ namespace py = pybind11;
 #include <henson/data.hpp>
 
 #include <mpi.h>
-
-struct PyArray: public henson::Array
-{
-    PyArray(henson::Array a, std::string f):
-        henson::Array(a), format(f)             {}
-    std::string format;
-};
 
 PYBIND11_MODULE(pyhenson, m)
 {
@@ -66,34 +60,28 @@ PYBIND11_MODULE(pyhenson, m)
                             new (&pm) ProcMap(comm, v);
                          });
 
-    py::class_<PyArray>(m,  "Array", py::buffer_protocol())
-        .def_buffer([](PyArray& a) -> py::buffer_info
-                    {
-                        return py::buffer_info
-                               { a.address,
-                                 a.type,
-                                 a.format,
-                                 1,
-                                 { a.count },
-                                 { a.stride }
-                               };
-                    });
-
     py::class_<NameMap>(m, "NameMap")
         .def(py::init<>())
-        .def("get_array",   [](NameMap& nm, std::string name, std::string format) { return PyArray(nm.get(name).a, format); })
-        .def("get",         [](NameMap& nm, std::string name, std::string format) -> py::object
+        .def("get",         [](NameMap& nm, std::string name) -> py::object
                             {
-                                if (format == "f")
-                                    return py::float_(nm.get(name).f);
-                                else if (format == "d")
-                                    return py::float_(nm.get(name).d);
-                                else if (format == "i")
-                                    return py::int_(nm.get(name).i);
-                                else if (format == "Q")
-                                    return py::int_(nm.get(name).s);
-                                else
-                                    throw py::cast_error("Unkown format: " + format);
+                                struct extract
+                                {
+                                    py::object operator()(int x) const      { return py::int_(x); }
+                                    py::object operator()(size_t x) const   { return py::int_(x); }
+                                    py::object operator()(float x) const    { return py::float_(x); }
+                                    py::object operator()(double x) const   { return py::float_(x); }
+                                    py::object operator()(void* x) const    { throw  py::cast_error("Cannot return void* to Python"); }
+                                    py::object operator()(Array a) const
+                                    {
+                                        if (a.type == sizeof(float))
+                                            return py::array_t<float>({ a.count }, { a.stride }, static_cast<float*>(a.address));
+                                        else if (a.type == sizeof(double))
+                                            return py::array_t<double>({ a.count }, { a.stride }, static_cast<double*>(a.address));
+                                        else
+                                            throw py::cast_error("Unknown type: " + std::to_string(a.type));
+                                    }
+                                };
+                                return mpark::visit(extract{}, nm.get(name));
                             })
         .def("exists",      &NameMap::exists)
         .def("clear",       &NameMap::clear);

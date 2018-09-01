@@ -4,6 +4,11 @@
 #include <string>
 #include <map>
 #include <queue>
+#include <vector>
+#include <memory>
+
+#include "variant.hpp"
+#include "serialization.hpp"
 
 namespace henson
 {
@@ -17,23 +22,33 @@ struct Array
     ssize_t type;
     size_t  count;
     size_t  stride;
+
+    std::shared_ptr<std::vector<char>>  storage {};     // necessary for de-serialization
 };
 
-struct Value
+template<>
+struct Serialization< Array >
 {
-            Value(): tag(_int), i(0)        {}
-    enum { _int, _size_t, _ptr, _float, _double, _array } tag;
-    union
-    {
-        int     i;
-        size_t  s;
-        void*   p;
-        float   f;
-        double  d;
-        Array   a;
-    };
+  static void         save(BinaryBuffer& bb, const Array& x)
+  {
+    henson::save(bb, x.type);
+    henson::save(bb, x.count);
+    for (size_t i = 0; i < x.count; ++i)
+        henson::save(bb, static_cast<char*>(x.address) + i*x.stride, x.type);
+  }
+
+  static void         load(BinaryBuffer& bb, Array& x)
+  {
+    henson::load(bb, x.type);
+    henson::load(bb, x.count);
+    x.storage = std::make_shared<std::vector<char>>(x.count*x.type);
+    henson::load(bb, x.storage->data(), x.storage->size());
+    x.address = x.storage->data();
+    x.stride = x.type;
+  }
 };
 
+using Value = mpark::variant<int, size_t, void*, float, double, Array>;
 
 class NameMap
 {

@@ -2,6 +2,7 @@
 #define HENSON_PYTHON_PUPPET_HPP
 
 #include <pybind11/embed.h>
+#include <pybind11/numpy.h>
 namespace py = pybind11;
 
 #include "coroutine.hpp"
@@ -63,13 +64,6 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
     NameMap*            namemap_;
 };
 
-struct PyArray: public Array
-{
-    PyArray(Array a, std::string f):
-        Array(a), format(f)             {}
-    std::string format;
-};
-
 }
 
 PYBIND11_EMBEDDED_MODULE(pyhenson, m)
@@ -93,38 +87,44 @@ PYBIND11_EMBEDDED_MODULE(pyhenson, m)
     m.def("yield_",     [self]() { self()->yield(); });
     m.def("stop",       [self]() { return self()->stop_ != 0; });
 
-    // TODO: this is duplicating code with Python bindings; find a way to avoid code duplication
-    py::class_<PyArray>(m,  "Array", py::buffer_protocol())
-        .def_buffer([](PyArray& a) -> py::buffer_info
-                    {
-                        return py::buffer_info
-                               { a.address,
-                                 a.type,
-                                 a.format,
-                                 1,
-                                 { a.count },
-                                 { a.stride }
-                               };
-                    });
-
-    m.def("get_array",  [nm](std::string name, std::string format) { return PyArray(nm()->get(name).a, format); });
-    m.def("get",        [nm](std::string name, std::string format) -> py::object
+    m.def("get",        [nm](std::string name) -> py::object
                         {
-                            if (format == "f")
-                                return py::float_(nm()->get(name).f);
-                            else if (format == "d")
-                                return py::float_(nm()->get(name).d);
-                            else if (format == "i")
-                                return py::int_(nm()->get(name).i);
-                            else if (format == "Q")
-                                return py::int_(nm()->get(name).s);
-                            else
-                                throw py::cast_error("Unkown format: " + format);
+                            struct extract
+                            {
+                                py::object operator()(int x) const      { return py::int_(x); }
+                                py::object operator()(size_t x) const   { return py::int_(x); }
+                                py::object operator()(float x) const    { return py::float_(x); }
+                                py::object operator()(double x) const   { return py::float_(x); }
+                                py::object operator()(void* x) const    { throw  py::cast_error("Cannot return void* to Python"); }
+                                py::object operator()(Array a) const
+                                {
+                                    if (a.type == sizeof(float))
+                                        return py::array_t<float>({ a.count }, { a.stride }, static_cast<float*>(a.address));
+                                    else if (a.type == sizeof(double))
+                                        return py::array_t<double>({ a.count }, { a.stride }, static_cast<double*>(a.address));
+                                    else
+                                        throw py::cast_error("Unknown type: " + std::to_string(a.type));
+                                }
+                            };
+                            return mpark::visit(extract{}, nm()->get(name));
                         });
-    m.def("add",        [nm](std::string name, int    x)    { Value v; v.tag = Value::_int;    v.i = x; nm()->add(name, v); });
-    m.def("add",        [nm](std::string name, size_t x)    { Value v; v.tag = Value::_size_t; v.s = x; nm()->add(name, v); });
-    m.def("add",        [nm](std::string name, float  x)    { Value v; v.tag = Value::_float;  v.f = x; nm()->add(name, v); });
-    m.def("add",        [nm](std::string name, double x)    { Value v; v.tag = Value::_double; v.d = x; nm()->add(name, v); });
+    m.def("add",        [nm](std::string name, int    x)    { Value v = x; nm()->add(name, v); });
+    m.def("add",        [nm](std::string name, size_t x)    { Value v = x; nm()->add(name, v); });
+    m.def("add",        [nm](std::string name, float  x)    { Value v = x; nm()->add(name, v); });
+    m.def("add",        [nm](std::string name, double x)    { Value v = x; nm()->add(name, v); });
+    m.def("add",        [nm](std::string name, const py::array& x)
+    {
+        size_t type;
+        if (x.dtype().is(py::dtype::of<float>()))
+            type = sizeof(float);
+        else if (x.dtype().is(py::dtype::of<double>()))
+            type = sizeof(double);
+        else
+            throw std::runtime_error("Unknown array dtype");
+
+        Value v = henson::Array(const_cast<void*>(x.data()), type, x.size(), type);
+        nm()->add(name, v);
+    });
 
     m.def("create_queue",   [nm](std::string name)          { nm()->create_queue(name); });
     m.def("queue_empty",    [nm](std::string name)          { return nm()->queue_empty(name); });
