@@ -83,9 +83,9 @@ PYBIND11_MODULE(pyhenson, m)
                                     py::object operator()(float x) const    { return py::float_(x); }
                                     py::object operator()(double x) const   { return py::float_(x); }
                                     py::object operator()(void* x) const    { throw  py::cast_error("Cannot return void* to Python"); }
-                                    py::object operator()(Array a) const    { return mpark::visit(extract_array { a.count, a.stride }, a.address); }
+                                    py::object operator()(Array a) const    { return visit(extract_array { a.count, a.stride }, a.address); }
                                 };
-                                return mpark::visit(extract{}, nm.get(name));
+                                return visit(extract{}, nm.get(name));
                             })
         .def("exists",      &NameMap::exists)
         .def("clear",       &NameMap::clear);

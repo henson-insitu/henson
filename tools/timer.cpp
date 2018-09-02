@@ -17,7 +17,7 @@ std::string     timer(std::string name)                     { return "timer_" + 
 std::string     timer_start(std::string name)               { return "timer_start_" + name; }
 
 void            save_time(std::string name, h::time_type t) { h::Value tv = static_cast<size_t>(t); h::save(name, tv); }
-h::time_type    load_time(std::string name)                 { return mpark::get<size_t>(h::load(name)); }
+h::time_type    load_time(std::string name)                 { return h::get<size_t>(h::load(name)); }
 
 h::time_type    get_henson_timer(std::string name)
 {

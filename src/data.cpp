@@ -23,7 +23,7 @@ henson_load_array(const char* name, void** address, size_t* type, size_t* count,
 {
     if (!namemap) return;
 
-    henson::Array a = mpark::get<henson::Array>(namemap->get(name));
+    henson::Array a = henson::get<henson::Array>(namemap->get(name));
     *address = a.void_ptr();
     *type    = a.type;
     *count   = a.count;
@@ -42,7 +42,7 @@ void
 henson_load_pointer(const char* name, void** ptr)
 {
     if (!namemap) return;
-    *ptr = mpark::get<void*>(namemap->get(name));
+    *ptr = henson::get<void*>(namemap->get(name));
 }
 
 void
@@ -57,7 +57,7 @@ void
 henson_load_size_t(const char* name, size_t* x)
 {
     if (!namemap) return;
-    *x = mpark::get<size_t>(namemap->get(name));
+    *x = henson::get<size_t>(namemap->get(name));
 }
 
 void
@@ -72,7 +72,7 @@ void
 henson_load_int(const char* name, int* x)
 {
     if (!namemap) return;
-    *x = mpark::get<int>(namemap->get(name));
+    *x = henson::get<int>(namemap->get(name));
 }
 
 void
@@ -87,7 +87,7 @@ void
 henson_load_float(const char* name, float* x)
 {
     if (!namemap) return;
-    *x = mpark::get<float>(namemap->get(name));
+    *x = henson::get<float>(namemap->get(name));
 }
 
 void
@@ -102,7 +102,7 @@ void
 henson_load_double(const char* name, double* x)
 {
     if (!namemap) return;
-    *x = mpark::get<double>(namemap->get(name));
+    *x = henson::get<double>(namemap->get(name));
 }
 
 void

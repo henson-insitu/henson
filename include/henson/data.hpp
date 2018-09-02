@@ -13,9 +13,14 @@
 namespace henson
 {
 
+using mpark::variant;
+using mpark::variant_alternative_t;
+using mpark::get;
+using mpark::visit;
+
 struct Array
 {
-    using Address = mpark::variant<void*, float*, double*, int*, long*>;
+    using Address = variant<void*, float*, double*, int*, long*>;
 
             Array(Address address_ = Address(), ssize_t type_ = 0, size_t count_ = 0, size_t stride_ = 0):
                 address(address_), type(type_), count(count_), stride(stride_)      {}
@@ -29,7 +34,7 @@ struct Array
         void*   operator()(long* x) const       { return x; }
     };
 
-    void*   void_ptr() const                    { return mpark::visit(get_void_ptr {}, address); }
+    void*   void_ptr() const                    { return visit(get_void_ptr {}, address); }
 
     Address address;
     ssize_t type;
@@ -62,21 +67,21 @@ struct Serialization< Array >
 
     void* data = x.storage->data();
     if (index == 0)
-        x.address = static_cast<mpark::variant_alternative_t<0, Array::Address>>(data);
+        x.address = static_cast<variant_alternative_t<0, Array::Address>>(data);
     else if (index == 1)
-        x.address = static_cast<mpark::variant_alternative_t<1, Array::Address>>(data);
+        x.address = static_cast<variant_alternative_t<1, Array::Address>>(data);
     else if (index == 2)
-        x.address = static_cast<mpark::variant_alternative_t<2, Array::Address>>(data);
+        x.address = static_cast<variant_alternative_t<2, Array::Address>>(data);
     else if (index == 3)
-        x.address = static_cast<mpark::variant_alternative_t<3, Array::Address>>(data);
+        x.address = static_cast<variant_alternative_t<3, Array::Address>>(data);
     else if (index == 4)
-        x.address = static_cast<mpark::variant_alternative_t<4, Array::Address>>(data);
+        x.address = static_cast<variant_alternative_t<4, Array::Address>>(data);
 
     x.stride = x.type;
   }
 };
 
-using Value = mpark::variant<int, size_t, void*, float, double, Array>;
+using Value = variant<int, size_t, void*, float, double, Array>;
 
 class NameMap
 {

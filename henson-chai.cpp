@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
             BV  operator()(double* x) const     { return BV(*(x + i)); }
             int i;
         };
-        return mpark::visit(extract { i }, a.address);
+        return visit(extract { i }, a.address);
     }), "[]");
 
     // NameMap
@@ -272,7 +272,7 @@ int main(int argc, char *argv[])
             BV operator()(void* x) const    { return BV((intptr_t) x); }
             BV operator()(h::Array x) const { return BV(x); }
         };
-        return mpark::visit(extract{}, val);
+        return visit(extract{}, val);
     }), "get");
     chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, int x)       { h::Value v = x; namemap->add(name, v); }), "add");
     chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, size_t x)    { h::Value v = x; namemap->add(name, v); }), "add");
