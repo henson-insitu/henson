@@ -24,7 +24,7 @@ henson_load_array(const char* name, void** address, size_t* type, size_t* count,
     if (!namemap) return;
 
     henson::Array a = mpark::get<henson::Array>(namemap->get(name));
-    *address = a.address;
+    *address = a.void_ptr();
     *type    = a.type;
     *count   = a.count;
     *stride  = a.stride;

@@ -64,6 +64,18 @@ PYBIND11_MODULE(pyhenson, m)
         .def(py::init<>())
         .def("get",         [](NameMap& nm, std::string name) -> py::object
                             {
+                                struct extract_array
+                                {
+                                    py::object   operator()(float* a) const     { return py::array_t<float>({ count }, { stride }, a); }
+                                    py::object   operator()(double* a) const    { return py::array_t<double>({ count }, { stride }, a); }
+                                    py::object   operator()(int* a) const       { return py::array_t<int>({ count }, { stride }, a); }
+                                    py::object   operator()(long* a) const      { return py::array_t<long>({ count }, { stride }, a); }
+                                    py::object   operator()(void*) const        { throw py::cast_error("Cannot convert void* array to NumPy"); }
+
+                                    size_t count;
+                                    size_t stride;
+                                };
+
                                 struct extract
                                 {
                                     py::object operator()(int x) const      { return py::int_(x); }
@@ -71,15 +83,7 @@ PYBIND11_MODULE(pyhenson, m)
                                     py::object operator()(float x) const    { return py::float_(x); }
                                     py::object operator()(double x) const   { return py::float_(x); }
                                     py::object operator()(void* x) const    { throw  py::cast_error("Cannot return void* to Python"); }
-                                    py::object operator()(Array a) const
-                                    {
-                                        if (a.type == sizeof(float))
-                                            return py::array_t<float>({ a.count }, { a.stride }, static_cast<float*>(a.address));
-                                        else if (a.type == sizeof(double))
-                                            return py::array_t<double>({ a.count }, { a.stride }, static_cast<double*>(a.address));
-                                        else
-                                            throw py::cast_error("Unknown type: " + std::to_string(a.type));
-                                    }
+                                    py::object operator()(Array a) const    { return mpark::visit(extract_array { a.count, a.stride }, a.address); }
                                 };
                                 return mpark::visit(extract{}, nm.get(name));
                             })

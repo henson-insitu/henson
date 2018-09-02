@@ -89,6 +89,18 @@ PYBIND11_EMBEDDED_MODULE(pyhenson, m)
 
     m.def("get",        [nm](std::string name) -> py::object
                         {
+                            struct extract_array
+                            {
+                                py::object   operator()(float* a) const     { return py::array_t<float>({ count }, { stride }, a); }
+                                py::object   operator()(double* a) const    { return py::array_t<double>({ count }, { stride }, a); }
+                                py::object   operator()(int* a) const       { return py::array_t<int>({ count }, { stride }, a); }
+                                py::object   operator()(long* a) const      { return py::array_t<long>({ count }, { stride }, a); }
+                                py::object   operator()(void*) const        { throw py::cast_error("Cannot convert void* array to NumPy"); }
+
+                                size_t count;
+                                size_t stride;
+                            };
+
                             struct extract
                             {
                                 py::object operator()(int x) const      { return py::int_(x); }
@@ -96,15 +108,7 @@ PYBIND11_EMBEDDED_MODULE(pyhenson, m)
                                 py::object operator()(float x) const    { return py::float_(x); }
                                 py::object operator()(double x) const   { return py::float_(x); }
                                 py::object operator()(void* x) const    { throw  py::cast_error("Cannot return void* to Python"); }
-                                py::object operator()(Array a) const
-                                {
-                                    if (a.type == sizeof(float))
-                                        return py::array_t<float>({ a.count }, { a.stride }, static_cast<float*>(a.address));
-                                    else if (a.type == sizeof(double))
-                                        return py::array_t<double>({ a.count }, { a.stride }, static_cast<double*>(a.address));
-                                    else
-                                        throw py::cast_error("Unknown type: " + std::to_string(a.type));
-                                }
+                                py::object operator()(Array a) const    { return mpark::visit(extract_array { a.count, a.stride }, a.address); }
                             };
                             return mpark::visit(extract{}, nm()->get(name));
                         });
@@ -112,17 +116,20 @@ PYBIND11_EMBEDDED_MODULE(pyhenson, m)
     m.def("add",        [nm](std::string name, size_t x)    { Value v = x; nm()->add(name, v); });
     m.def("add",        [nm](std::string name, float  x)    { Value v = x; nm()->add(name, v); });
     m.def("add",        [nm](std::string name, double x)    { Value v = x; nm()->add(name, v); });
-    m.def("add",        [nm](std::string name, const py::array& x)
+    m.def("add",        [nm](std::string name, py::array& x)
     {
-        size_t type;
+        Value v;
         if (x.dtype().is(py::dtype::of<float>()))
-            type = sizeof(float);
+            v = henson::Array(static_cast<float*>(x.mutable_data()), sizeof(float), x.size(), sizeof(float));
         else if (x.dtype().is(py::dtype::of<double>()))
-            type = sizeof(double);
+            v = henson::Array(static_cast<double*>(x.mutable_data()), sizeof(double), x.size(), sizeof(double));
+        else if (x.dtype().is(py::dtype::of<int>()))
+            v = henson::Array(static_cast<int*>(x.mutable_data()), sizeof(int), x.size(), sizeof(int));
+        else if (x.dtype().is(py::dtype::of<long>()))
+            v = henson::Array(static_cast<long*>(x.mutable_data()), sizeof(long), x.size(), sizeof(long));
         else
             throw std::runtime_error("Unknown array dtype");
 
-        Value v = henson::Array(const_cast<void*>(x.data()), type, x.size(), type);
         nm()->add(name, v);
     });
 

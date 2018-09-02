@@ -1,6 +1,15 @@
 var procmap = ProcMap()
+var nm      = NameMap()
+
 var example = python("example.py", procmap)
 example.proceed()
+
+var arr = nm.get("arr")
+for (var i = 0; i < arr.size(); ++i)
+{
+    puts("arr: ${i} -> ${arr[i]}\n")
+}
+
 puts("Back from example\n")
 example.proceed()
 puts("Back from example\n")

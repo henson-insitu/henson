@@ -1,4 +1,9 @@
 import pyhenson as h
+import numpy as np
+
+arr = np.array([5.,2.,8.])
+print(arr)
+h.add("arr", arr)
 
 print("Hello from example")
 

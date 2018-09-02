@@ -235,9 +235,25 @@ int main(int argc, char *argv[])
     }), "python");
 #endif
 
+    using BV = chaiscript::Boxed_Value;
+
     // Array
     chai.add(chaiscript::user_type<h::Array>(), "Array");
     chai.add(chaiscript::bootstrap::basic_constructors<h::Array>("Array"));
+    chai.add(chaiscript::fun([](const h::Array& a)  { return a.count; }), "size");
+    chai.add(chaiscript::fun([](const h::Array& a, int i) -> BV
+    {
+        struct extract
+        {
+            BV  operator()(void* x) const       { throw std::runtime_error("Cannot access elements in a generic (void*) array"); }
+            BV  operator()(int* x) const        { return BV(*(x + i)); }
+            BV  operator()(long* x) const       { return BV(*(x + i)); }
+            BV  operator()(float* x) const      { return BV(*(x + i)); }
+            BV  operator()(double* x) const     { return BV(*(x + i)); }
+            int i;
+        };
+        return mpark::visit(extract { i }, a.address);
+    }), "[]");
 
     // NameMap
     // TODO: why not just create a new namemap?
@@ -246,7 +262,6 @@ int main(int argc, char *argv[])
     // NB: not exposed to chai: arrays
     chai.add(chaiscript::fun([](henson::NameMap* namemap, std::string name)
     {
-        using BV = chaiscript::Boxed_Value;
         henson::Value val = namemap->get(name);
         struct extract
         {
@@ -284,7 +299,7 @@ int main(int argc, char *argv[])
         return std::make_shared<h::Scheduler>(proc_map->local(), &chai, proc_map.get(), controller_ranks);
     }),                                                                     "Scheduler");
 
-    auto clone    = chai.eval<std::function<chaiscript::Boxed_Value (const chaiscript::Boxed_Value&)>>("clone");
+    auto clone    = chai.eval<std::function<BV (const BV&)>>("clone");
     auto schedule = [&clone](h::Scheduler* s, std::string name, std::string function, chaiscript::Boxed_Value arg, std::map<std::string, chaiscript::Boxed_Value> groups, int size)
     {
         h::ProcMap::Vector groups_vector;
