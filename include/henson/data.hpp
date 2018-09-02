@@ -22,7 +22,7 @@ struct Array
 {
     using Address = variant<void*, float*, double*, int*, long*>;
 
-            Array(Address address_ = Address(), ssize_t type_ = 0, size_t count_ = 0, size_t stride_ = 0):
+            Array(Address address_ = Address(), size_t type_ = 0, size_t count_ = 0, size_t stride_ = 0):
                 address(address_), type(type_), count(count_), stride(stride_)      {}
 
     struct get_void_ptr
@@ -37,7 +37,7 @@ struct Array
     void*   void_ptr() const                    { return visit(get_void_ptr {}, address); }
 
     Address address;
-    ssize_t type;
+    size_t  type;
     size_t  count;
     size_t  stride;
 
