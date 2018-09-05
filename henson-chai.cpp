@@ -292,6 +292,7 @@ int main(int argc, char *argv[])
     chai.add(chaiscript::fun(&h::ProcMap::local_rank),                      "local_rank");
     chai.add(chaiscript::fun([](h::ProcMap* pm, std::string to)
                              { pm->intercomm(to); }),                       "intercomm");
+    chai.add(chaiscript::fun(&h::ProcMap::size),                            "size");
 
     // Scheduler
     chai.add(chaiscript::fun([&chai,controller_ranks]()
