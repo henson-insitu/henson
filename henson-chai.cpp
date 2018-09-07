@@ -192,6 +192,13 @@ int main(int argc, char *argv[])
     std::unique_ptr<chaiscript::ChaiScript> chai_ptr { new chaiscript::ChaiScript(chaiscript::Std_Lib::library()) };
     chaiscript::ChaiScript& chai = *chai_ptr;
 
+    // BaseCoroutine
+    chai.add(chaiscript::user_type<h::BaseCoroutine>(), "BaseCoroutine");
+    chai.add(chaiscript::fun(&h::BaseCoroutine::running),      "running");
+    chai.add(chaiscript::fun(&h::BaseCoroutine::signal_stop),  "signal_stop");
+    chai.add(chaiscript::fun(&h::BaseCoroutine::total_time),   "total_time");
+    chai.add(chaiscript::fun(&h::BaseCoroutine::name),         "name");
+
     // Puppet
     chai.add(chaiscript::base_class<h::BaseCoroutine, h::Puppet>());
     chai.add(chaiscript::user_type<h::Puppet>(),        "Puppet");
@@ -202,9 +209,6 @@ int main(int argc, char *argv[])
         puppet.proceed();
         return puppet.running();
     }), "proceed");
-    chai.add(chaiscript::fun(&h::Puppet::running),      "running");
-    chai.add(chaiscript::fun(&h::Puppet::signal_stop),  "signal_stop");
-    chai.add(chaiscript::fun(&h::Puppet::total_time),   "total_time");
 
     chai.add(chaiscript::fun([&namemap,script_prefix](std::string cmd_line_str, henson::ProcMap* pm)
     {
