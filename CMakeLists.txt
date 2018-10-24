@@ -129,3 +129,23 @@ add_subdirectory            (tools)
 if                          (python)
     add_subdirectory        (bindings/python)
 endif                       (python)
+
+
+# henson-chai + henson_lib
+install                     (TARGETS henson-chai henson_lib
+                                RUNTIME DESTINATION bin
+                                LIBRARY DESTINATION lib
+                                ARCHIVE DESTINATION lib)
+
+if                          (mpi-wrappers)
+    # libraries
+    install                 (TARGETS henson-pmpi henson-pmpi-static
+                                LIBRARY DESTINATION lib
+                                ARCHIVE DESTINATION lib)
+endif                       (mpi-wrappers)
+
+# headers
+foreach                     (h data.h data.hpp context.h)
+    install                 (FILES  ${CMAKE_SOURCE_DIR}/include/henson/${h}
+                             DESTINATION include/henson)
+endforeach                  ()
