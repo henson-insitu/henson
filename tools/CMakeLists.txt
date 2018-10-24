@@ -15,3 +15,5 @@ if                          (NOT APPLE)
    set_target_properties    (timer          PROPERTIES LINK_FLAGS ${linker_flags})
 endif                       (NOT APPLE)
 
+# tools
+install                     (TARGETS send receive RUNTIME DESTINATION share/henson)
