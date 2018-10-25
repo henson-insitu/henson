@@ -362,6 +362,11 @@ int main(int argc, char *argv[])
     if(rank == 0)
     {
         std::ifstream script_file(script_fn, std::ios::in | std::ios::binary | std::ios::ate);
+        if (!script_file)
+        {
+            logger->critical("Unable to open: {}", script_fn);
+            MPI_Abort(world, 1);
+        }
         file_size = script_file.tellg();
         buffered_in.resize(file_size);
         script_file.seekg(0, std::ios::beg);
