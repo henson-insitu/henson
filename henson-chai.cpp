@@ -23,16 +23,15 @@ std::shared_ptr<spd::logger> logger;
 #include <chaiscript/chaiscript_stdlib.hpp>
 
 #include <henson/context.h>
-#include <henson/time.hpp>
 #include <henson/procs.hpp>
-#include <henson/data.hpp>
-#include <henson/puppet.hpp>
-#include <henson/scheduler.hpp>
 #include <henson/command-line.hpp>
 namespace h = henson;
-#ifdef HENSON_PYTHON
-#include <henson/python-puppet.hpp>
-#endif
+
+#include <henson/chai/puppet.hpp>
+#include <henson/chai/data.hpp>
+#include <henson/chai/procs.hpp>
+#include <henson/chai/scheduler.hpp>
+#include <henson/chai/util.hpp>
 
 // used for debugging of segfaults
 int rank;
@@ -115,23 +114,6 @@ void catch_sig(int signum)
         MPI_Abort(MPI_COMM_WORLD, 1);
 }
 
-// pretty-print an Array
-template<class T>
-std::string convert(T* x, size_t count, size_t stride)
-{
-    std::string result = "[";
-    for (size_t i = 0; i < count; ++i)
-    {
-        result += std::to_string(*x);
-        if (i != count - 1)
-            result += ", ";
-
-        x = (T*) ((char*) x + stride);      // this is horribly ugly, but technically correct
-    }
-    result += "]";
-    return result;
-}
-
 
 int main(int argc, char *argv[])
 {
@@ -209,183 +191,11 @@ int main(int argc, char *argv[])
     std::unique_ptr<chaiscript::ChaiScript> chai_ptr { new chaiscript::ChaiScript(chaiscript::Std_Lib::library()) };
     chaiscript::ChaiScript& chai = *chai_ptr;
 
-    // BaseCoroutine
-    chai.add(chaiscript::user_type<h::BaseCoroutine>(), "BaseCoroutine");
-    chai.add(chaiscript::fun(&h::BaseCoroutine::running),      "running");
-    chai.add(chaiscript::fun(&h::BaseCoroutine::signal_stop),  "signal_stop");
-    chai.add(chaiscript::fun(&h::BaseCoroutine::total_time),   "total_time");
-    chai.add(chaiscript::fun(&h::BaseCoroutine::name),         "name");
-
-    // Puppet
-    chai.add(chaiscript::base_class<h::BaseCoroutine, h::Puppet>());
-    chai.add(chaiscript::user_type<h::Puppet>(),        "Puppet");
-    chai.add(chaiscript::fun([](h::Puppet& puppet)
-    {
-        active_puppet = puppet.name();
-        logger->debug("Proceeding with {}", puppet.name());
-        puppet.proceed();
-        return puppet.running();
-    }), "proceed");
-
-    chai.add(chaiscript::fun([&namemap,script_prefix](std::string cmd_line_str, henson::ProcMap* pm)
-    {
-        auto cmd_line = h::CommandLine(cmd_line_str);
-        return std::make_shared<h::Puppet>(cmd_line.executable(script_prefix),
-                                           cmd_line.argv.size(),
-                                           &cmd_line.argv[0],
-                                           pm,
-                                           &namemap);
-    }), "load");
-
-#ifdef HENSON_PYTHON
-    // PythonPuppet
-    chai.add(chaiscript::base_class<h::BaseCoroutine, h::PythonPuppet>());
-    chai.add(chaiscript::user_type<h::PythonPuppet>(),  "PythonPuppet");
-    chai.add(chaiscript::fun([](h::PythonPuppet& puppet)
-    {
-        active_puppet = puppet.name();
-        logger->debug("Proceeding with {}", puppet.name());
-        puppet.proceed();
-        return puppet.running();
-    }), "proceed");
-    chai.add(chaiscript::fun([&namemap,script_prefix](std::string python_script, henson::ProcMap* pm)
-    {
-        if (python_script[0] != '/' && python_script[0] != '~')
-            python_script = script_prefix + python_script;
-        return std::make_shared<h::PythonPuppet>(python_script, pm, &namemap);
-    }), "python");
-#endif
-
-    using BV = chaiscript::Boxed_Value;
-
-    // Array
-    chai.add(chaiscript::user_type<h::Array>(), "Array");
-    chai.add(chaiscript::bootstrap::basic_constructors<h::Array>("Array"));
-    chai.add(chaiscript::fun([](const h::Array& a)  { return a.count; }), "size");
-    chai.add(chaiscript::fun([](const h::Array& a, int i) -> BV
-    {
-        struct extract
-        {
-            BV  operator()(void* x) const       { throw std::runtime_error("Cannot access elements in a generic (void*) array"); }
-            BV  operator()(int* x) const        { return BV(*(x + i)); }
-            BV  operator()(long* x) const       { return BV(*(x + i)); }
-            BV  operator()(float* x) const      { return BV(*(x + i)); }
-            BV  operator()(double* x) const     { return BV(*(x + i)); }
-            int i;
-        };
-        return visit(extract { i }, a.address);
-    }), "[]");
-    chai.add(chaiscript::fun([](const h::Array& a)
-    {
-        struct extract
-        {
-            std::string operator()(void* x) const   { return fmt::format("Array<void*> with {} elements", count); }
-            std::string operator()(int* x) const    { return "Array<int*>"    + convert(x, count, stride); }
-            std::string operator()(long* x) const   { return "Array<long*>"   + convert(x, count, stride); }
-            std::string operator()(float* x) const  { return "Array<float*>"  + convert(x, count, stride); }
-            std::string operator()(double* x) const { return "Array<doube*>"  + convert(x, count, stride); }
-
-            size_t count, stride;
-        };
-        return visit(extract{a.count,a.stride}, a.address);
-    }), "to_string");
-
-    // NameMap
-    // TODO: why not just create a new namemap?
-    chai.add(chaiscript::fun([&namemap] () { return &namemap; }), "NameMap");
-    // Probably should figure out what to do if something isn't in the map
-    // NB: not exposed to chai: arrays
-    chai.add(chaiscript::fun([](henson::NameMap* namemap, std::string name)
-    {
-        henson::Value val = namemap->get(name);
-        struct extract
-        {
-            BV operator()(int x) const      { return BV(x); }
-            BV operator()(size_t x) const   { return BV(x); }
-            BV operator()(float x) const    { return BV(x); }
-            BV operator()(double x) const   { return BV(x); }
-            BV operator()(void* x) const    { return BV((intptr_t) x); }
-            BV operator()(h::Array x) const { return BV(x); }
-        };
-        return visit(extract{}, val);
-    }), "get");
-    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, int x)       { h::Value v = x; namemap->add(name, v); }), "add");
-    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, size_t x)    { h::Value v = x; namemap->add(name, v); }), "add");
-    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, float x)     { h::Value v = x; namemap->add(name, v); }), "add");
-    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, double x)    { h::Value v = x; namemap->add(name, v); }), "add");
-    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, h::Array x)  { h::Value v = x; namemap->add(name, v); }), "add");
-    chai.add(chaiscript::fun(&h::NameMap::create_queue),                    "create_queue");
-    chai.add(chaiscript::fun(&h::NameMap::queue_empty),                     "queue_empty");
-    chai.add(chaiscript::fun(&h::NameMap::exists),                          "exists");
-
-
-    // ProcMap
-    chai.add(chaiscript::fun([]() { return proc_map; }),                    "ProcMap");
-    chai.add(chaiscript::fun(&h::ProcMap::group),                           "group");
-    chai.add(chaiscript::fun(&h::ProcMap::color),                           "color");
-    chai.add(chaiscript::fun(&h::ProcMap::world_rank),                      "world_rank");
-    chai.add(chaiscript::fun(&h::ProcMap::local_rank),                      "local_rank");
-    chai.add(chaiscript::fun([](h::ProcMap* pm, std::string to)
-                             { pm->intercomm(to); }),                       "intercomm");
-    chai.add(chaiscript::fun(&h::ProcMap::size),                            "size");
-
-    // Scheduler
-    chai.add(chaiscript::fun([&chai,controller_ranks]()
-    {
-        return std::make_shared<h::Scheduler>(proc_map->local(), &chai, proc_map.get(), controller_ranks);
-    }),                                                                     "Scheduler");
-
-    auto clone    = chai.eval<std::function<BV (const BV&)>>("clone");
-    auto schedule = [&clone](h::Scheduler* s, std::string name, std::string function, chaiscript::Boxed_Value arg, std::map<std::string, chaiscript::Boxed_Value> groups, int size)
-    {
-        h::ProcMap::Vector groups_vector;
-
-        // divide unused procs between groups of size <= 0
-        std::vector<std::string> unspecified;
-        int specified = 0;
-        for (auto& x : groups)
-        {
-            int sz = chaiscript::boxed_cast<int>(x.second);
-            if (sz <= 0)
-                unspecified.push_back(x.first);
-            else
-                specified += sz;
-        }
-
-        int leftover = size - specified;
-        int leftover_group_size = size / unspecified.size();
-        for (auto& x : groups)
-        {
-            int sz = chaiscript::boxed_cast<int>(x.second);
-            if (sz > 0)
-                groups_vector.emplace_back(x.first, sz);
-            else if (x.first == unspecified.back())
-                groups_vector.emplace_back(x.first, leftover - leftover_group_size * (unspecified.size() - 1));     // in case leftover doesn't divide evenly
-            else
-                groups_vector.emplace_back(x.first, leftover_group_size);
-        }
-        s->schedule(name, function, clone(arg), groups_vector, size);
-    };
-    chai.add(chaiscript::fun(schedule),                                     "schedule");
-    chai.add(chaiscript::fun(&h::Scheduler::listen),                        "listen");
-    chai.add(chaiscript::fun(&h::Scheduler::size),                          "size");
-    chai.add(chaiscript::fun(&h::Scheduler::rank),                          "rank");
-    chai.add(chaiscript::fun(&h::Scheduler::workers),                       "workers");
-    chai.add(chaiscript::fun(&h::Scheduler::job_queue_empty),               "job_queue_empty");
-    chai.add(chaiscript::fun(&h::Scheduler::is_controller),                 "is_controller");
-    chai.add(chaiscript::fun(&h::Scheduler::control),                       "control");
-    chai.add(chaiscript::fun(&h::Scheduler::results_empty),                 "results_empty");
-    chai.add(chaiscript::fun(&h::Scheduler::pop),                           "pop");
-    chai.add(chaiscript::fun(&h::Scheduler::finish),                        "finish");
-
-    chai.add(chaiscript::fun([](int secs) { sleep(secs); }),                "sleep");
-    chai.add(chaiscript::fun([]() { std::cout << std::flush; }),            "flush");
-    chai.add(chaiscript::fun(&h::get_time),                                 "time");
-    chai.add(chaiscript::fun(&h::clock_to_string),                          "clock_to_string");
-    chai.add(chaiscript::fun([](bool abort_on_segfault)
-                             { abort_on_segfault_ = abort_on_segfault; }),  "abort_on_segfault");
-    chai.add(chaiscript::fun([](std::string dir)
-                             { return chdir(dir.c_str()); }),               "chdir");
+    chai_puppet(chai, namemap, script_prefix);
+    chai_data(chai, namemap);
+    chai_procs(chai);
+    chai_scheduler(chai, controller_ranks);
+    chai_util(chai);
 
     // Read and broadcast the script
     std::vector<char> buffered_in;

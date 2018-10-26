@@ -7,6 +7,8 @@
 #include <vector>
 #include <stdexcept>
 
+#include <mpi.h>
+
 #include <fmt/format.h>
 
 namespace henson

@@ -5,6 +5,7 @@
 #include <chaiscript/dispatchkit/boxed_value.hpp>
 
 #include <henson/serialization.hpp>
+#include <henson/data.hpp>
 
 namespace henson
 {
