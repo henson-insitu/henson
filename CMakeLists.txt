@@ -89,9 +89,12 @@ set                         (libraries henson_lib ${libraries} ${mpi_libraries})
 endif()
 
 
+# git version
+include                     (git_watcher.cmake)
 
 add_executable              (henson-hwl  henson-hwl.cpp)
 add_executable              (henson-chai henson-chai.cpp
+                                         ${CMAKE_CURRENT_BINARY_DIR}/src/version.cpp
                                          src/chai/puppet.cpp
                                          src/chai/data.cpp
                                          src/chai/procs.cpp
@@ -116,6 +119,8 @@ else()
     target_link_libraries   (henson-chai PRIVATE coro)
     set_target_properties   (henson-chai PROPERTIES COMPILE_FLAGS "${CORO_TYPE}")
 endif()
+
+add_dependencies            (henson-chai AlwaysCheckGit)
 
 
 add_custom_command          (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/examples/run_test.sh

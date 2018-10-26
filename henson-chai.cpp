@@ -21,6 +21,7 @@ std::shared_ptr<spd::logger> logger;
 
 #include <chaiscript/chaiscript.hpp>
 
+#include <henson/version.hpp>
 #include <henson/context.h>
 #include <henson/procs.hpp>
 #include <henson/command-line.hpp>
@@ -132,7 +133,7 @@ int main(int argc, char *argv[])
     std::vector<std::string>    variables;
     std::string                 log_level = "info";
     int                         controller_ranks = 1;
-    bool verbose, help;
+    bool verbose, help, version;
 
     using namespace opts;
     Options ops;
@@ -143,10 +144,11 @@ int main(int argc, char *argv[])
         >> Option('c', "controller", controller_ranks,  "ranks to use for scheduler controller")
         >> Option("verbose",    verbose,     "verbose output")
         >> Option('h', "help",  help,        "show help")
+        >> Option('v', "version", version,   "show version")
     ;
 
     std::string script_fn;
-    if (!ops.parse(argc,argv) || help || !(ops >> PosOption(script_fn)))
+    if (!ops.parse(argc,argv) || help || (!version && !(ops >> PosOption(script_fn))))
     {
         if (rank == 0)
         {
@@ -157,6 +159,13 @@ int main(int argc, char *argv[])
             fmt::print("{}", ops);
         }
         return 1;
+    }
+
+    if (version)
+    {
+        if (rank == 0)
+            fmt::print("henson-chai version {}\n", HENSON_VERSION);
+        return 0;
     }
 
     logger = spd::stderr_logger_st("henson");

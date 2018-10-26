@@ -1,0 +1,3 @@
+#include <henson/version.hpp>
+
+const std::string HENSON_VERSION = "@GIT_DESCRIBE@";
