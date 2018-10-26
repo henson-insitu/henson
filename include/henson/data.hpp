@@ -130,6 +130,12 @@ bool        exists(const std::string& name);
 
 void        save(const std::string& name, Value x);
 
+template<class T>
+void        save(const std::string& name, const std::vector<T>& v)
+{
+    save(name, Array(const_cast<T*>(v.data()), sizeof(T), v.size(), sizeof(T)));
+}
+
 NameMap*    get_namemap();
 
 Value       load(const std::string& name);
