@@ -20,7 +20,6 @@ namespace spd = spdlog;
 std::shared_ptr<spd::logger> logger;
 
 #include <chaiscript/chaiscript.hpp>
-#include <chaiscript/chaiscript_stdlib.hpp>
 
 #include <henson/context.h>
 #include <henson/procs.hpp>
@@ -32,6 +31,7 @@ namespace h = henson;
 #include <henson/chai/procs.hpp>
 #include <henson/chai/scheduler.hpp>
 #include <henson/chai/util.hpp>
+#include <henson/chai/stdlib.hpp>
 
 // used for debugging of segfaults
 int rank;
@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
 
     henson_set_procmap(&*proc_map);         // "activate henson" in libhenson-pmpi.so
 
-    std::unique_ptr<chaiscript::ChaiScript> chai_ptr { new chaiscript::ChaiScript(chaiscript::Std_Lib::library()) };
+    auto chai_ptr = chai_stdlib();
     chaiscript::ChaiScript& chai = *chai_ptr;
 
     chai_puppet(chai, namemap, script_prefix);

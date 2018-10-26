@@ -96,7 +96,8 @@ add_executable              (henson-chai henson-chai.cpp
                                          src/chai/data.cpp
                                          src/chai/procs.cpp
                                          src/chai/scheduler.cpp
-                                         src/chai/util.cpp)
+                                         src/chai/util.cpp
+                                         src/chai/stdlib.cpp)
 target_link_libraries       (henson-hwl  PRIVATE fmt ${libraries})
 target_link_libraries       (henson-chai PRIVATE fmt ${libraries})
 if                          (python)
