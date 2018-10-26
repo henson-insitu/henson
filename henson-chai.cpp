@@ -115,6 +115,23 @@ void catch_sig(int signum)
         MPI_Abort(MPI_COMM_WORLD, 1);
 }
 
+// pretty-print an Array
+template<class T>
+std::string convert(T* x, size_t count, size_t stride)
+{
+    std::string result = "[";
+    for (size_t i = 0; i < count; ++i)
+    {
+        result += std::to_string(*x);
+        if (i != count - 1)
+            result += ", ";
+
+        x = (T*) ((char*) x + stride);      // this is horribly ugly, but technically correct
+    }
+    result += "]";
+    return result;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -258,6 +275,20 @@ int main(int argc, char *argv[])
         };
         return visit(extract { i }, a.address);
     }), "[]");
+    chai.add(chaiscript::fun([](const h::Array& a)
+    {
+        struct extract
+        {
+            std::string operator()(void* x) const   { return fmt::format("Array<void*> with {} elements", count); }
+            std::string operator()(int* x) const    { return "Array<int*>"    + convert(x, count, stride); }
+            std::string operator()(long* x) const   { return "Array<long*>"   + convert(x, count, stride); }
+            std::string operator()(float* x) const  { return "Array<float*>"  + convert(x, count, stride); }
+            std::string operator()(double* x) const { return "Array<doube*>"  + convert(x, count, stride); }
+
+            size_t count, stride;
+        };
+        return visit(extract{a.count,a.stride}, a.address);
+    }), "to_string");
 
     // NameMap
     // TODO: why not just create a new namemap?
