@@ -54,7 +54,7 @@ if                          (python)
     add_definitions         (-DHENSON_PYTHON)
 endif()
 
-set                         (CMAKE_CXX_STANDARD 11)
+set                         (CMAKE_CXX_STANDARD 14)
 
 # Format
 add_subdirectory            (ext/fmt)
