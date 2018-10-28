@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    logger = spd::stderr_logger_st("console");
+    logger = spd::stderr_logger_st("henson");
     logger->set_level(spd::level::off);
     int lvl;
     for (lvl = spd::level::trace; lvl < spd::level::off; ++lvl)

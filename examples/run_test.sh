@@ -26,8 +26,8 @@ do
         FAIL_REPEAT=0
         for i in $(seq 1 8)
         do
-            mpirun -n $num ../../henson $HWL_FILE 1>$HWL_OUT 2>&1
-            mpirun -n $num ../../henson_chai $CHAI_FILE $CURR_ARGS 1>$CHAI_OUT 2>&1
+            mpirun -n $num ../../henson-hwl $HWL_FILE 1>$HWL_OUT 2>&1
+            mpirun -n $num ../../henson-chai $CHAI_FILE $CURR_ARGS 1>$CHAI_OUT 2>&1
             WC_HWL=$(wc -l $HWL_OUT | awk '{ print($1); }') 
             WC_CHAI=$(wc -l $CHAI_OUT | awk '{print($1); }')
 
@@ -44,7 +44,7 @@ do
             PASSED=0
             CHAI_PASS=0
             HWL_PASS=0
-            echo "Henson chai and henson don't match output line numbers $directory failed with $num proccessors"
+            echo "henson-chai and henson-hwl don't match output line numbers $directory failed with $num proccessors"
         fi
 
         FIN=$(tail -n 1 $HWL_OUT | awk '{ print($5, $6) }')
@@ -72,8 +72,6 @@ do
         then
             rm -f $HWL_OUT
         fi
-
-        
     done
     ((COUNT += 1))
     cd ..
