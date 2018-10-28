@@ -164,7 +164,17 @@ int main(int argc, char *argv[])
     if (version)
     {
         if (rank == 0)
-            fmt::print("henson-chai version {}\n", HENSON_VERSION);
+        {
+            fmt::print("henson-chai version {}", HENSON_VERSION);
+#if defined(MPICH_VERSION)
+            fmt::print(" (MPICH version {})", MPICH_VERSION);
+#elif defined(OMPI_MAJOR_VERSION)
+            fmt::print(" (OpenMPI version {}.{}.{})", OMPI_MAJOR_VERSION, OMPI_MINOR_VERSION, OMPI_RELEASE_VERSION);
+#else
+            fmt::print(" (unknown MPI)");
+#endif
+            fmt::print("\n");
+        }
         return 0;
     }
 

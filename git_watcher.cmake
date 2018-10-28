@@ -94,6 +94,7 @@ function(GetGitState _working_dir _hashvar _dirty _success _describe)
     set(${_hashvar} "GIT-NOTFOUND" PARENT_SCOPE)
     set(${_dirty} "false" PARENT_SCOPE)
     set(${_success} "false" PARENT_SCOPE)
+    set(${_describe} "unknown" PARENT_SCOPE)
 
     # Find git.
     if(NOT GIT_FOUND)
