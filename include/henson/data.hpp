@@ -36,6 +36,26 @@ struct Array
 
     void*   void_ptr() const                    { return visit(get_void_ptr {}, address); }
 
+    // fill the storage with array contents
+    void    copy()
+    {
+        storage = std::make_shared<std::vector<char>>(count*type);
+        char* char_ptr = static_cast<char*>(void_ptr());
+        for (size_t i = 0; i < count; ++i)
+            std::copy(char_ptr + i*stride, char_ptr + i*stride + type, storage->data() + i*type);
+        visit(replace_ptr {storage->data()}, address);
+    }
+
+    struct replace_ptr
+    {
+        void    operator()(void*& x) const      { x = static_cast<void*>(ptr); }
+        void    operator()(float*& x) const     { x = static_cast<float*>(ptr); }
+        void    operator()(double*& x) const    { x = static_cast<double*>(ptr); }
+        void    operator()(int*& x) const       { x = static_cast<int*>(ptr); }
+        void    operator()(long*& x) const      { x = static_cast<long*>(ptr); }
+        void* ptr;
+    };
+
     Address address;
     size_t  type;
     size_t  count;

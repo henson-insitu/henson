@@ -30,6 +30,7 @@ void chai_data(chaiscript::ChaiScript& chai, henson::NameMap& namemap)
     chai.add(chaiscript::user_type<h::Array>(), "Array");
     chai.add(chaiscript::bootstrap::basic_constructors<h::Array>("Array"));
     chai.add(chaiscript::fun([](const h::Array& a)  { return a.count; }), "size");
+    chai.add(chaiscript::fun(&h::Array::copy), "copy");
     chai.add(chaiscript::fun([](const h::Array& a, int i) -> BV
     {
         struct extract
