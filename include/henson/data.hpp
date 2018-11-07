@@ -44,6 +44,7 @@ struct Array
         for (size_t i = 0; i < count; ++i)
             std::copy(char_ptr + i*stride, char_ptr + i*stride + type, storage->data() + i*type);
         visit(replace_ptr {storage->data()}, address);
+        stride = type;
     }
 
     struct replace_ptr
