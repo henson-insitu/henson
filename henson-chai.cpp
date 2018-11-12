@@ -115,6 +115,20 @@ void catch_sig(int signum)
         MPI_Abort(MPI_COMM_WORLD, 1);
 }
 
+std::string henson_version()
+{
+    std::string result;
+    result += fmt::format("henson-chai version {}", HENSON_VERSION);
+#if defined(MPICH_VERSION)
+    result += fmt::format(" (MPICH version {})", MPICH_VERSION);
+#elif defined(OMPI_MAJOR_VERSION)
+    result += fmt::format(" (OpenMPI version {}.{}.{})", OMPI_MAJOR_VERSION, OMPI_MINOR_VERSION, OMPI_RELEASE_VERSION);
+#else
+    result += fmt::format(" (unknown MPI)");
+#endif
+    return result;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -165,14 +179,7 @@ int main(int argc, char *argv[])
     {
         if (rank == 0)
         {
-            fmt::print("henson-chai version {}", HENSON_VERSION);
-#if defined(MPICH_VERSION)
-            fmt::print(" (MPICH version {})", MPICH_VERSION);
-#elif defined(OMPI_MAJOR_VERSION)
-            fmt::print(" (OpenMPI version {}.{}.{})", OMPI_MAJOR_VERSION, OMPI_MINOR_VERSION, OMPI_RELEASE_VERSION);
-#else
-            fmt::print(" (unknown MPI)");
-#endif
+            fmt::print(henson_version());
             fmt::print("\n");
         }
         return 0;
@@ -194,7 +201,10 @@ int main(int argc, char *argv[])
     logger->set_pattern(fmt::format("[{}]: [%Y-%m-%d %H:%M:%S.%e] [%l] %v", rank));
 
     if (verbose || rank == 0)
+    {
+        logger->info(henson_version());
         logger->info("henson started; total processes = {}", size);
+    }
 
     if (procs_sizes.empty())
         logger->warn("No procs specified on the command line");
