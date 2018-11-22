@@ -52,7 +52,7 @@ void chai_data(chaiscript::ChaiScript& chai, henson::NameMap& namemap)
             std::string operator()(int* x) const    { return "Array<int*>"    + convert(x, count, stride); }
             std::string operator()(long* x) const   { return "Array<long*>"   + convert(x, count, stride); }
             std::string operator()(float* x) const  { return "Array<float*>"  + convert(x, count, stride); }
-            std::string operator()(double* x) const { return "Array<doube*>"  + convert(x, count, stride); }
+            std::string operator()(double* x) const { return "Array<double*>" + convert(x, count, stride); }
 
             size_t count, stride;
         };
