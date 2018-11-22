@@ -120,13 +120,13 @@ PYBIND11_EMBEDDED_MODULE(pyhenson, m)
     {
         Value v;
         if (x.dtype().is(py::dtype::of<float>()))
-            v = henson::Array(static_cast<float*>(x.mutable_data()), sizeof(float), x.size(), sizeof(float));
+            v = henson::Array(static_cast<float*>(x.mutable_data()), sizeof(float), x.size(), x.strides(0));
         else if (x.dtype().is(py::dtype::of<double>()))
-            v = henson::Array(static_cast<double*>(x.mutable_data()), sizeof(double), x.size(), sizeof(double));
+            v = henson::Array(static_cast<double*>(x.mutable_data()), sizeof(double), x.size(), x.strides(0));
         else if (x.dtype().is(py::dtype::of<int>()))
-            v = henson::Array(static_cast<int*>(x.mutable_data()), sizeof(int), x.size(), sizeof(int));
+            v = henson::Array(static_cast<int*>(x.mutable_data()), sizeof(int), x.size(), x.strides(0));
         else if (x.dtype().is(py::dtype::of<long>()))
-            v = henson::Array(static_cast<long*>(x.mutable_data()), sizeof(long), x.size(), sizeof(long));
+            v = henson::Array(static_cast<long*>(x.mutable_data()), sizeof(long), x.size(), x.strides(0));
         else
             throw std::runtime_error("Unknown array dtype");
 
