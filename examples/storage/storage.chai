@@ -16,6 +16,11 @@ def compute(arg)
 
 if (pm.group() == "storage")
 {
+    if (pm.size("storage") != 2)
+    {
+        print("Error: storage must have exactly 2 procs (since each compute job uses 2 procs)")
+    }
+
     pm.intercomm("compute")
 
     var storage = load("./storage compute", pm)

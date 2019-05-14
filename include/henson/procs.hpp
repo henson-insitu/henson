@@ -106,7 +106,7 @@ class ProcMap
             MPI_Comm intra_comm;
             int remote_leader = leader(to);
             int local_leader  = leader(group());
-            MPI_Intercomm_merge(inter_comm, local_leader < remote_leader, &intra_comm);
+            MPI_Intercomm_merge(inter_comm, local_leader > remote_leader, &intra_comm);
 
             level().intercomm_cache[to] = { inter_comm, intra_comm };
 
