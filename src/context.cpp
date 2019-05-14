@@ -1,4 +1,5 @@
 #include <henson/context.h>
+#include <henson/context.hpp>
 #include <henson/procs.hpp>
 
 #ifdef USE_BOOST
@@ -46,6 +47,12 @@ void henson_set_contexts(void* p, void* l)
 void henson_set_procmap(void* pm)
 {
     procmap = static_cast<henson::ProcMap*>(pm);
+}
+
+__attribute__ ((visibility ("hidden")))
+henson::ProcMap* henson::get_procmap()
+{
+    return procmap;
 }
 
 __attribute__ ((visibility ("hidden")))
