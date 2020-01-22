@@ -16,7 +16,11 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
                         PythonPuppet(const std::string& filename, ProcMap* procmap, NameMap* namemap):
                             Parent(filename),
                             filename_(filename), procmap_(procmap), namemap_(namemap)
-                        {}
+                        {
+                            static std::unique_ptr<py::scoped_interpreter> guard;
+                            if (!guard)
+                                guard = decltype(guard)(new py::scoped_interpreter);
+                        }
 
                         ~PythonPuppet()
                         {
@@ -33,28 +37,30 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
 
         while(true)
         {
-            py::scoped_interpreter guard;
+            {
+                // we can have only one PythonPuppet (otherwise scoped_interpreter
+                // will complain), so there is only one pyhenson module, with only
+                // one self to modify
+                py::module::import("pyhenson").attr("self") = reinterpret_cast<intptr_t>(self_);
 
-            // we can have only one PythonPuppet (otherwise scoped_interpreter
-            // will complain), so there is only one pyhenson module, with only
-            // one self to modify
-            py::module::import("pyhenson").attr("self") = reinterpret_cast<intptr_t>(self_);
+                self->running_ = true;
+                self->start_time_ = get_time();
+                try
+                {
+                    py::dict globals;
+                    py::eval_file(self->filename_, globals);
+                } catch (const py::error_already_set& e)
+                {
+                    self->log_->info("Caught error_already_set (maybe SystemExit; check debug channel for details)");
+                    self->log_->debug("  {}", e.what());
+                }
+                catch (const std::exception& e)
+                {
+                    self->log_->warn("Got exception from Python: {}", e.what());
+                }
+                self->running_ = false;
+            }
 
-            self->running_ = true;
-            self->start_time_ = get_time();
-            try
-            {
-                py::eval_file(self->filename_);
-            } catch (const py::error_already_set& e)
-            {
-                self->log_->info("Caught error_already_set (maybe SystemExit; check debug channel for details)");
-                self->log_->debug("  {}", e.what());
-            }
-            catch (const std::exception& e)
-            {
-                self->log_->warn("Got exception from Python: {}", e.what());
-            }
-            self->running_ = false;
             self->yield();      // the time for the final portion will get recorded thanks to this call
         }
     }
