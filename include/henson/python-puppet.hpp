@@ -47,8 +47,8 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
                 self->start_time_ = get_time();
                 try
                 {
-                    py::dict globals;
-                    py::eval_file(self->filename_, globals);
+                    py::dict locals;
+                    py::eval_file(self->filename_, py::globals(), locals);
                 } catch (const py::error_already_set& e)
                 {
                     self->log_->info("Caught error_already_set (maybe SystemExit; check debug channel for details)");
