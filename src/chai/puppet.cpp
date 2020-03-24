@@ -55,11 +55,10 @@ void chai_puppet(chaiscript::ChaiScript& chai, henson::NameMap& namemap, std::st
         puppet.proceed();
         return puppet.running();
     }), "proceed");
-    chai.add(chaiscript::fun([&namemap,script_prefix](std::string python_script, henson::ProcMap* pm)
+    chai.add(chaiscript::fun([&namemap,script_prefix](std::string python_cmd_line_str, henson::ProcMap* pm)
     {
-        if (python_script[0] != '/' && python_script[0] != '~')
-            python_script = script_prefix + python_script;
-        return std::make_shared<h::PythonPuppet>(python_script, pm, &namemap);
+        auto cmd_line = h::CommandLine(python_cmd_line_str);
+        return std::make_shared<h::PythonPuppet>(cmd_line.executable(script_prefix), cmd_line.argv, pm, &namemap);
     }), "python");
 #endif
 }

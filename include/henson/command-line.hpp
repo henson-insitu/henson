@@ -41,7 +41,7 @@ struct CommandLine
 
     std::string                 executable(std::string prefix = "") const
     {
-        auto exec = std::string(arguments[0].begin(), arguments[0].end());
+        auto exec = std::string(arguments[0].begin(), arguments[0].end() - 1);
         if (exec[0] != '/' && exec[0] != '~')
             exec = prefix + exec;
         return exec;

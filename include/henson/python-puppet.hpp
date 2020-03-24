@@ -22,6 +22,19 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
                                 guard = decltype(guard)(new py::scoped_interpreter);
                         }
 
+                        PythonPuppet(const std::string& filename, std::vector<std::string> arguments, ProcMap* procmap, NameMap* namemap):
+                            PythonPuppet(filename, procmap, namemap)
+                        {
+                            arguments_ = std::move(arguments);
+                        }
+
+                        PythonPuppet(const std::string& filename, std::vector<char*> arguments, ProcMap* procmap, NameMap* namemap):
+                            PythonPuppet(filename, procmap, namemap)
+                        {
+                            for (auto& arg : arguments)
+                                arguments_.emplace_back(arg);
+                        }
+
                         ~PythonPuppet()
                         {
                             if(running_)
@@ -47,6 +60,14 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
                 self->start_time_ = get_time();
                 try
                 {
+                    auto argv = py::module::import("sys").attr("argv");
+                    argv.attr("clear")();
+                    for(size_t i = 0; i < self->arguments_.size(); ++i)
+                    {
+                        auto& arg = self->arguments_[i];
+                        argv.attr("append")(arg);
+                    }
+
                     py::dict locals;
                     py::eval_file(self->filename_, py::globals(), locals);
                 } catch (const py::error_already_set& e)
@@ -65,9 +86,10 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
         }
     }
 
-    std::string         filename_;
-    ProcMap*            procmap_;
-    NameMap*            namemap_;
+    std::string                 filename_;
+    ProcMap*                    procmap_;
+    NameMap*                    namemap_;
+    std::vector<std::string>    arguments_;
 };
 
 }
