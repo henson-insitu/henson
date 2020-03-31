@@ -68,7 +68,7 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
                         argv.attr("append")(arg);
                     }
 
-                    py::dict locals;
+                    py::object locals;
                     py::eval_file(self->filename_, py::globals(), locals);
                 } catch (const py::error_already_set& e)
                 {
