@@ -7,7 +7,7 @@
 namespace bc = boost::context;
 typedef     bc::execution_context<void*>    context_t;
 #else
-#include <coro.h>
+#include <henson/coro.h>
 typedef     coro_context                    context_t;
 #endif
 

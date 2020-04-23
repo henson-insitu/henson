@@ -38,7 +38,7 @@
  * go to Ralf S. Engelschall <rse@engelschall.com>.
  */
 
-#include "coro.h"
+#include <henson/coro.h>
 
 #include <stddef.h>
 #include <string.h>

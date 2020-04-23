@@ -156,9 +156,9 @@ if                          (mpi-wrappers)
 endif                       (mpi-wrappers)
 
 # headers
-foreach                     (h data.h data.hpp context.h context.hpp
+foreach                     (h data.h data.hpp context.h context.hpp coro.h
                                procs.hpp coroutine.hpp puppet.hpp python-puppet.hpp
-                               serialization.hpp)
+                               time.hpp variant.hpp serialization.hpp)
     install                 (FILES  ${CMAKE_SOURCE_DIR}/include/henson/${h}
                              DESTINATION include/henson)
 endforeach                  ()

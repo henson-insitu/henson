@@ -9,7 +9,7 @@ namespace spd = spdlog;
 #ifdef USE_BOOST
 #include <boost/context/continuation.hpp>
 #else
-#include <coro.h>
+#include <henson/coro.h>
 #endif
 
 #include <henson/time.hpp>
