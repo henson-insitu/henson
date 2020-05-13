@@ -21,4 +21,5 @@ add_custom_command          (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/test.py
                              MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/test.py)
 add_custom_target           (test.py ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/test.py)
 
-
+add_executable              (test_embedded_python test_embedded_python.cpp)
+target_link_libraries       (test_embedded_python PRIVATE pybind11::embed fmt)
