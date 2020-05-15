@@ -44,10 +44,29 @@ struct Puppet: public Coroutine<Puppet>
                                 strcpy(argv_[i], argv[i]);
                             }
 
-                            void* lib = dlopen(fn.c_str(), RTLD_LAZY);
+                            load(procmap, namemap);
+                        }
+
+                        Puppet(const std::string& fn, const std::vector<std::string>& args, ProcMap* procmap, NameMap* namemap):
+                            Parent(fn),
+                            filename_(fn),
+                            argc_(args.size()), argv_(argc_)
+                        {
+                            for (int i = 0; i < argc_; ++i)
+                            {
+                                argv_[i] = new char[strlen(args[i].c_str()) + 1];
+                                strcpy(argv_[i], args[i].c_str());
+                            }
+
+                            load(procmap, namemap);
+                        }
+
+    void                load(ProcMap* procmap, NameMap* namemap)
+                        {
+                            void* lib = dlopen(filename_.c_str(), RTLD_LAZY);
                             lib_ = lib;
                             if (lib == NULL)
-                                throw std::runtime_error(fmt::format("Could not load {}\n{}\n", fn, dlerror()));
+                                throw std::runtime_error(fmt::format("Could not load {}\n{}\n", filename_, dlerror()));
 
                             main_ = get_function<MainType>(lib, "main");
 

@@ -101,8 +101,11 @@ add_executable              (henson-chai henson-chai.cpp
                                          src/chai/scheduler.cpp
                                          src/chai/util.cpp
                                          src/chai/stdlib.cpp)
+add_executable              (henson-exec henson-exec.cpp
+                                         ${CMAKE_CURRENT_BINARY_DIR}/src/version.cpp)
 target_link_libraries       (henson-hwl  PRIVATE fmt ${libraries})
 target_link_libraries       (henson-chai PRIVATE fmt ${libraries})
+target_link_libraries       (henson-exec PRIVATE fmt ${libraries})
 if                          (python)
     target_link_libraries(henson-chai PRIVATE pybind11::embed)
 endif()
@@ -111,16 +114,21 @@ if                          (use_boost)
     target_link_libraries   (henson-hwl PRIVATE ${Boost_CONTEXT_LIBRARY})
     target_link_libraries   (henson_lib PRIVATE ${Boost_CONTEXT_LIBRARY})
     target_link_libraries   (henson-chai PRIVATE ${Boost_CONTEXT_LIBRARY})
+    target_link_libraries   (henson-exec PRIVATE ${Boost_CONTEXT_LIBRARY})
     set_target_properties   (henson-hwl  PROPERTIES COMPILE_FLAGS "-DUSE_BOOST")
     set_target_properties   (henson-chai PROPERTIES COMPILE_FLAGS "-DUSE_BOOST")
+    set_target_properties   (henson-exec PROPERTIES COMPILE_FLAGS "-DUSE_BOOST")
 else()
     target_link_libraries   (henson-hwl  PRIVATE coro)
     set_target_properties   (henson-hwl  PROPERTIES COMPILE_FLAGS "${CORO_TYPE}")
     target_link_libraries   (henson-chai PRIVATE coro)
     set_target_properties   (henson-chai PROPERTIES COMPILE_FLAGS "${CORO_TYPE}")
+    target_link_libraries   (henson-exec PRIVATE coro)
+    set_target_properties   (henson-exec PROPERTIES COMPILE_FLAGS "${CORO_TYPE}")
 endif()
 
 add_dependencies            (henson-chai AlwaysCheckGit)
+add_dependencies            (henson-exec AlwaysCheckGit)
 
 
 add_custom_command          (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/examples/run_test.sh
@@ -143,7 +151,7 @@ endif                       (python)
 
 
 # henson-chai + henson_lib
-install                     (TARGETS henson-chai henson_lib
+install                     (TARGETS henson-chai henson_lib henson-exec
                                 RUNTIME DESTINATION bin
                                 LIBRARY DESTINATION lib
                                 ARCHIVE DESTINATION lib)
