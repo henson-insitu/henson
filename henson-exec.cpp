@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
         while(ops >> PosOption(str))
             args.push_back(str);
 
-    if (!parse_result || help || args.empty())
+    if (!parse_result || help || (args.empty() && !version))
     {
         if (rank == 0)
         {
