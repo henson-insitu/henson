@@ -136,6 +136,23 @@ add_custom_command          (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/examples/run_tes
                              MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/examples/run_test.sh)
 add_custom_target           (run_test.sh ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/examples/run_test.sh)
 
+# Helper to compile Henson executables
+function (add_henson_executable name sources)
+    if                  (APPLE)
+        add_executable  (${name} ${sources})
+    else                ()
+        #add_executable          (${name} ${sources})
+        add_library             (${name} SHARED ${sources})
+        set_target_properties   (${name} PROPERTIES PREFIX "")
+        set_target_properties   (${name} PROPERTIES SUFFIX "")
+
+        #set                      (linker_flags "-pie -Wl,--export-dynamic")
+        set                     (linker_flags "-Wl,--export-dynamic")
+        set                     (linker_flags "${linker_flags} -Wl,-u,henson_set_contexts,-u,henson_set_namemap")
+        set_target_properties   (${name} PROPERTIES LINK_FLAGS ${linker_flags})
+    endif               ()
+endfunction()
+
 add_subdirectory            (examples/simple)
 add_subdirectory            (examples/intercomm)
 add_subdirectory            (examples/async)
