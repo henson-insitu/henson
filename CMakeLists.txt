@@ -1,5 +1,5 @@
 project                     (Henson)
-cmake_minimum_required      (VERSION 3.1)
+cmake_minimum_required      (VERSION 3.9)
 
 option                      (use_boost          "Use Boost.Context"              OFF)
 option                      (python             "Build Python bindings"          ON)
@@ -22,7 +22,7 @@ endif()
 
 # MPI
 find_package                (MPI REQUIRED)
-set                         (mpi_libraries              ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
+set                         (mpi_libraries MPI::MPI_C)
 
 # DL
 set                         (libraries ${libraries} ${CMAKE_DL_LIBS})
