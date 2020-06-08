@@ -47,6 +47,7 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
     static void         exec(void* self_)
     {
         PythonPuppet* self = (PythonPuppet*) self_;
+        self->self = self;
 
         while(true)
         {
@@ -86,10 +87,18 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
         }
     }
 
+    void                proceed()
+    {
+        py::module::import("pyhenson").attr("self") = reinterpret_cast<intptr_t>(self);
+        Parent::proceed();
+    }
+
     std::string                 filename_;
     ProcMap*                    procmap_;
     NameMap*                    namemap_;
     std::vector<std::string>    arguments_;
+
+    PythonPuppet*               self;
 };
 
 }
