@@ -61,7 +61,12 @@ struct PythonPuppet: public Coroutine<PythonPuppet>
                 self->start_time_ = get_time();
                 try
                 {
-                    auto argv = py::module::import("sys").attr("argv");
+                    py::list argv;
+                    if (py::hasattr(py::module::import("sys"), "argv")) {
+                        argv = py::module::import("sys").attr("argv");
+                    } else {
+                        py::module::import("sys").add_object("argv", argv);
+                    }
                     argv.attr("clear")();
                     for(size_t i = 0; i < self->arguments_.size(); ++i)
                     {
