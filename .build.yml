@@ -1,0 +1,29 @@
+image: archlinux
+triggers:
+  - action: email
+    condition: failure
+    to: Dmitriy Morozov <dmitriy@mrzv.org>
+packages:
+  - cmake
+  - boost
+  - python
+  - openmpi
+sources:
+  - https://github.com/henson-insitu/henson
+tasks:
+  - configure: |
+      cd henson
+      mkdir build
+      cd build
+      cmake ..
+  - build: |
+      cd henson/build
+      make
+  - configure-boost: |
+      cd henson
+      mkdir build-boost
+      cd build-boost
+      cmake .. -Duse_boost=on
+  - build-boost: |
+      cd henson/build-boost
+      make
