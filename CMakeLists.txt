@@ -22,7 +22,7 @@ endif()
 
 # MPI
 find_package                (MPI REQUIRED)
-set                         (mpi_libraries MPI::MPI_C)
+set                         (mpi_libraries MPI::MPI_C MPI::MPI_CXX)
 
 # DL
 set                         (libraries ${libraries} ${CMAKE_DL_LIBS})
