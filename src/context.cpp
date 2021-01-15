@@ -3,9 +3,9 @@
 #include <henson/procs.hpp>
 
 #ifdef USE_BOOST
-#include <boost/context/execution_context.hpp>
+#include <boost/context/continuation.hpp>
 namespace bc = boost::context;
-typedef     bc::execution_context<void*>    context_t;
+typedef     bc::continuation                context_t;
 #else
 #include <henson/coro.h>
 typedef     coro_context                    context_t;
@@ -32,7 +32,7 @@ void henson_yield()
         return;
 
 #ifdef USE_BOOST
-    *parent = std::move(std::get<0>((*parent)(0)));
+    *parent = parent->resume();
 #else
     coro_transfer(local, parent);
 #endif
