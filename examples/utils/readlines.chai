@@ -1,0 +1,7 @@
+var lines = readlines("myfile.txt")
+print("Read ${lines.size()} lines")
+
+for (var i = 0; i < lines.size(); ++i)
+{
+    print(lines[i])
+}
