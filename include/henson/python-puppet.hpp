@@ -151,6 +151,7 @@ PYBIND11_EMBEDDED_MODULE(pyhenson, m)
                                 py::object operator()(double x) const   { return py::float_(x); }
                                 py::object operator()(void* x) const    { throw  py::cast_error("Cannot return void* to Python"); }
                                 py::object operator()(Array a) const    { return visit(extract_array { a.count, a.stride }, a.address); }
+                                py::object operator()(std::string x) const   { return py::str(x); }
                             };
                             return visit(extract{}, nm()->get(name));
                         });
@@ -174,6 +175,7 @@ PYBIND11_EMBEDDED_MODULE(pyhenson, m)
 
         nm()->add(name, v);
     });
+    m.def("add",        [nm](std::string name, std::string x)    { Value v = x; nm()->add(name, v); });
 
     m.def("create_queue",   [nm](std::string name)          { nm()->create_queue(name); });
     m.def("queue_empty",    [nm](std::string name)          { return nm()->queue_empty(name); });

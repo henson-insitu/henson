@@ -75,6 +75,7 @@ void chai_data(chaiscript::ChaiScript& chai, henson::NameMap& namemap)
             BV operator()(double x) const   { return BV(x); }
             BV operator()(void* x) const    { return BV((intptr_t) x); }
             BV operator()(h::Array x) const { return BV(x); }
+            BV operator()(std::string x) const { return BV(x); }
         };
         return visit(extract{}, val);
     }), "get");
@@ -83,6 +84,7 @@ void chai_data(chaiscript::ChaiScript& chai, henson::NameMap& namemap)
     chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, float x)     { h::Value v = x; namemap->add(name, v); }), "add");
     chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, double x)    { h::Value v = x; namemap->add(name, v); }), "add");
     chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, h::Array x)  { h::Value v = x; namemap->add(name, v); }), "add");
+    chai.add(chaiscript::fun([](h::NameMap* namemap, std::string name, std::string x)  { h::Value v = x; namemap->add(name, v); }), "add");
     chai.add(chaiscript::fun(&h::NameMap::create_queue),                    "create_queue");
     chai.add(chaiscript::fun(&h::NameMap::queue_empty),                     "queue_empty");
     chai.add(chaiscript::fun(&h::NameMap::exists),                          "exists");

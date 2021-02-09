@@ -102,7 +102,7 @@ struct Serialization< Array >
   }
 };
 
-using Value = variant<int, size_t, void*, float, double, Array>;
+using Value = variant<int, size_t, void*, float, double, Array, std::string>;
 
 class NameMap
 {
