@@ -58,6 +58,24 @@ void chai_data(chaiscript::ChaiScript& chai, henson::NameMap& namemap)
         };
         return visit(extract{a.count,a.stride}, a.address);
     }), "to_string");
+    chai.add(chaiscript::fun([](const h::Array& a)
+    {
+        std::string result;
+        if (a.storage)
+        {
+            result = fmt::format("internal ({}): ", a.storage->size());;
+            for (char c : (*a.storage))
+                result += fmt::format("{:02x}", (unsigned char) c);
+        }
+        else
+        {
+            result = fmt::format("external ({}): ", a.count * a.stride);
+            unsigned char* ac = (unsigned char*) a.void_ptr();
+            for (unsigned i = 0; i < a.count * a.stride; ++i)
+                result += fmt::format("{:02x}", (unsigned char) ac[i]);
+        }
+        return result;
+    }), "storage");
 
     // NameMap
     // TODO: why not just create a new namemap?
