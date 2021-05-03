@@ -140,11 +140,11 @@ class Scheduler
                 else if(job_status.MPI_TAG == tags::job)
                 {
                     int buffer_size;
-                    MPI_Get_count(&job_status, MPI_CHAR, &buffer_size);
+                    MPI_Get_count(&job_status, MPI_BYTE, &buffer_size);
                     henson::MemoryBuffer bb;
                     bb.buffer.resize(buffer_size);
 
-                    MPI_Recv(bb.data(), bb.size(), MPI_CHAR, 0, tags::job, world_, MPI_STATUS_IGNORE);
+                    MPI_Recv(bb.data(), bb.size(), MPI_BYTE, 0, tags::job, world_, MPI_STATUS_IGNORE);
 
                     size_t first, last;
                     Job job;
@@ -180,7 +180,7 @@ class Scheduler
                         henson::save(bb, job.id);
                         henson::save(bb, job.name);
                         henson::save(bb, result);
-                        MPI_Send(bb.data(), bb.size(), MPI_CHAR, 0, tags::job_finished, world_);
+                        MPI_Send(bb.data(), bb.size(), MPI_BYTE, 0, tags::job_finished, world_);
                     } else
                         log_->debug("Result undefined");
                     log_->debug("Finished job {}", job.name);
@@ -241,7 +241,7 @@ class Scheduler
             double start_time = MPI_Wtime();        // NB: timer starts at the point of sending
             for(size_t i = first; i <= last; ++i)
             {
-                MPI_Send(bb.data(), bb.size(), MPI_CHAR, i, tags::job, world_);
+                MPI_Send(bb.data(), bb.size(), MPI_BYTE, i, tags::job, world_);
                 available_procs_[i] = false;
             }
 
@@ -270,12 +270,12 @@ class Scheduler
             while (iprobe(MPI_ANY_SOURCE, tags::job_finished, job_status))
             {
                 int buffer_size;
-                MPI_Get_count(&job_status, MPI_CHAR, &buffer_size);
+                MPI_Get_count(&job_status, MPI_BYTE, &buffer_size);
                 henson::MemoryBuffer bb;
                 bb.buffer.resize(buffer_size);
 
                 int from = job_status.MPI_SOURCE;
-                MPI_Recv(bb.data(), bb.size(), MPI_CHAR, from, tags::job_finished, world_, MPI_STATUS_IGNORE);
+                MPI_Recv(bb.data(), bb.size(), MPI_BYTE, from, tags::job_finished, world_, MPI_STATUS_IGNORE);
                 double end_time = MPI_Wtime();
 
                 size_t      id;
