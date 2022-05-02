@@ -58,7 +58,12 @@ PYBIND11_MODULE(pyhenson, m)
                          {
                             MPI_Comm comm = *static_cast<MPI_Comm*>(reinterpret_cast<void*>(comm_));
                             new (&pm) ProcMap(comm, v);
-                         });
+                         })
+        .def("local", &ProcMap::local)
+        .def("world", &ProcMap::world)
+        .def("group", &ProcMap::group)
+        .def("intercomm", &ProcMap::intercomm)
+       ;
 
     py::class_<NameMap>(m, "NameMap")
         .def(py::init<>())
