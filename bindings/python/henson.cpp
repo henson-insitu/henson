@@ -164,4 +164,9 @@ PYBIND11_MODULE(pyhenson, m)
 
     m.def("clock_to_string",  &clock_to_string);
     m.def("world_size",       []() { int size; MPI_Comm_size(MPI_COMM_WORLD, &size); return size; });
+
+#if defined(HENSON_MPI4PY)
+    m.def("to_mpi4py",      [](py::capsule c)    -> mpi4py_comm  { return from_capsule<MPI_Comm>(c); });
+    m.def("from_mpi4py",    [](mpi4py_comm comm) -> py::capsule  { return to_capsule(static_cast<MPI_Comm>(comm)); });
+#endif
 }
