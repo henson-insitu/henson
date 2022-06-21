@@ -22,7 +22,7 @@ namespace py = pybind11;
 template<class Comm, typename std::enable_if<std::is_pointer<Comm>::value,bool>::type = true>
 py::capsule to_capsule(Comm comm)
 {
-    return comm;
+    return py::capsule(comm);
 }
 
 template<class Comm>
