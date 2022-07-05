@@ -47,7 +47,7 @@ PYBIND11_MODULE(pyhenson, m)
                                     std::copy(arg.begin(), arg.end(), arguments.back());
                                     arguments.back()[arg.size()] = '\0';
 
-                                    fmt::print("{}\n", arguments.back());
+                                    //fmt::print("{}\n", arguments.back());
                                 }
 
                                 new (&p) Puppet(filename, argc + 1, &arguments[0], &procmap, &namemap);
