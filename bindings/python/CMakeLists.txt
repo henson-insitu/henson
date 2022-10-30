@@ -1,3 +1,6 @@
+list                        (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
+find_package                (MPI4Py)
+
 pybind11_add_module         (pyhenson henson.cpp)
 
 target_link_libraries       (pyhenson PRIVATE fmt ${libraries})
@@ -7,6 +10,11 @@ if                          (use_boost)
 else()
     target_link_libraries   (pyhenson PRIVATE coro)
     set_target_properties   (pyhenson PROPERTIES COMPILE_FLAGS "${CORO_TYPE}")
+endif()
+
+if                          (MPI4Py_FOUND)
+    target_compile_definitions  (pyhenson PUBLIC "-DHENSON_MPI4PY")
+    target_include_directories  (pyhenson PUBLIC ${MPI4Py_INCLUDE_DIR})
 endif()
 
 list                        (APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/ext/pybind11/tools")

@@ -32,6 +32,7 @@ struct Array
         void*   operator()(double* x) const     { return x; }
         void*   operator()(int* x) const        { return x; }
         void*   operator()(long* x) const       { return x; }
+        void*   operator()(char* x) const       { return x; }
     };
 
     void*   void_ptr() const                    { return visit(get_void_ptr {}, address); }
@@ -54,6 +55,7 @@ struct Array
         void    operator()(double*& x) const    { x = static_cast<double*>(ptr); }
         void    operator()(int*& x) const       { x = static_cast<int*>(ptr); }
         void    operator()(long*& x) const      { x = static_cast<long*>(ptr); }
+        void    operator()(char*& x) const      { x = static_cast<char*>(ptr); }
         void* ptr;
     };
 

@@ -12,9 +12,22 @@ namespace py = pybind11;
 
 #include <mpi.h>
 
+#if defined(HENSON_MPI4PY)
+#include "mpi-comm.h"
+#endif
+
+#include "mpi-capsule.h"
+
 PYBIND11_MODULE(pyhenson, m)
 {
     m.doc() = "Henson bindings";
+
+
+#if defined(HENSON_MPI4PY)
+    // import the mpi4py API
+    if (import_mpi4py() < 0)
+        throw std::runtime_error("Could not load mpi4py API.");
+#endif
 
     using namespace henson;
 
@@ -34,7 +47,7 @@ PYBIND11_MODULE(pyhenson, m)
                                     std::copy(arg.begin(), arg.end(), arguments.back());
                                     arguments.back()[arg.size()] = '\0';
 
-                                    fmt::print("{}\n", arguments.back());
+                                    //fmt::print("{}\n", arguments.back());
                                 }
 
                                 new (&p) Puppet(filename, argc + 1, &arguments[0], &procmap, &namemap);
@@ -54,15 +67,34 @@ PYBIND11_MODULE(pyhenson, m)
                             { return "Puppet: " + p.filename_; });
 
     py::class_<ProcMap>(m, "ProcMap")
-        .def("__init__", [](ProcMap& pm, long comm_, ProcMap::Vector v)
+        .def("__init__", [](ProcMap& pm, ProcMap::Vector v)
                          {
-                            MPI_Comm comm = *static_cast<MPI_Comm*>(reinterpret_cast<void*>(comm_));
+                            MPI_Comm comm = MPI_COMM_WORLD;
                             new (&pm) ProcMap(comm, v);
                          })
-        .def("local", &ProcMap::local)
-        .def("world", &ProcMap::world)
+        .def("__init__", [](ProcMap& pm, py::capsule comm, ProcMap::Vector v)
+                         {
+                            new (&pm) ProcMap(from_capsule<MPI_Comm>(comm), v);
+                         })
+#if defined(HENSON_MPI4PY)
+        .def("__init__", [](ProcMap& pm, mpi4py_comm comm, ProcMap::Vector v)
+                         {
+                            new (&pm) ProcMap(comm, v);
+                         })
+#endif
+        .def("local", [](const ProcMap& pm)
+                      {
+                          return to_capsule(pm.local());
+                      })
+        .def("world", [](const ProcMap& pm)
+                      {
+                          return to_capsule(pm.world());
+                      })
         .def("group", &ProcMap::group)
-        .def("intercomm", &ProcMap::intercomm)
+        .def("intercomm", [](ProcMap& pm, const std::string& to, int tag = 0)
+                          {
+                            return to_capsule(pm.intercomm(to, tag));
+                          })
        ;
 
     py::class_<NameMap>(m, "NameMap")
@@ -97,4 +129,10 @@ PYBIND11_MODULE(pyhenson, m)
         .def("clear",       &NameMap::clear);
 
     m.def("clock_to_string",  &clock_to_string);
+    m.def("world_size",       []() { int size; MPI_Comm_size(MPI_COMM_WORLD, &size); return size; });
+
+#if defined(HENSON_MPI4PY)
+    m.def("to_mpi4py",      [](py::capsule c)    -> mpi4py_comm  { return from_capsule<MPI_Comm>(c); });
+    m.def("from_mpi4py",    [](mpi4py_comm comm) -> py::capsule  { return to_capsule(static_cast<MPI_Comm>(comm)); });
+#endif
 }
