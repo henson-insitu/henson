@@ -15,8 +15,7 @@
 #include <opts/opts.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
-#include <spdlog/spdlog.h>
-namespace spd = spdlog;
+#include <henson/logger.hpp>
 std::shared_ptr<spd::logger> logger;
 
 #include <chaiscript/chaiscript.hpp>
@@ -145,7 +144,7 @@ int main(int argc, char *argv[])
 
     std::vector<std::string>    procs_sizes { "world" };
     std::vector<std::string>    variables;
-    std::string                 log_level = "info";
+    std::string                 log_level = "trace";
     int                         controller_ranks = 1;
     bool verbose, help, version;
 
@@ -189,7 +188,7 @@ int main(int argc, char *argv[])
     logger->set_level(spd::level::warn);
     int lvl;
     for (lvl = spd::level::trace; lvl < spd::level::off; ++lvl)
-        if (spd::level::level_names[lvl] == log_level)
+        if (spd::level::level_string_views[lvl] == log_level)
             break;
     if (verbose || rank == 0)
     {

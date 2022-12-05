@@ -1,6 +1,7 @@
 #ifndef HENSON_PROCS_HPP
 #define HENSON_PROCS_HPP
 
+#include <iostream>
 #include <string>
 #include <map>
 #include <set>
@@ -63,7 +64,7 @@ class ProcMap
 
             extend(world, procs);
         }
-                    ~ProcMap()                                              { pop_back(); }
+                    ~ProcMap()                                              { pop_back();}
 
         // better safe than sorry
                     ProcMap(const ProcMap&)                                 =delete;

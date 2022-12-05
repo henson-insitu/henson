@@ -15,8 +15,7 @@
 #include <opts/opts.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
-#include <spdlog/spdlog.h>
-namespace spd = spdlog;
+#include <henson/logger.hpp>
 std::shared_ptr<spd::logger> logger;
 
 #include <henson/version.hpp>
@@ -184,7 +183,7 @@ int main(int argc, char *argv[])
     logger->set_level(spd::level::warn);
     int lvl;
     for (lvl = spd::level::trace; lvl < spd::level::off; ++lvl)
-        if (spd::level::level_names[lvl] == log_level)
+        if (spd::level::level_string_views[lvl] == log_level)
             break;
     if (verbose || rank == 0)
     {

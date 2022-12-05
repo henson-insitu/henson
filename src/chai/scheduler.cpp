@@ -1,22 +1,28 @@
+#include <iostream>
 #include <memory>
 
 #include <henson/chai/scheduler.hpp>
 #include <henson/scheduler.hpp>
 namespace h = henson;
+namespace chs = chaiscript;
 
 extern std::shared_ptr<h::ProcMap> proc_map;
 
-void chai_scheduler(chaiscript::ChaiScript& chai, int controller_ranks)
+void chai_scheduler(chs::ChaiScript& chai, int controller_ranks)
 {
     // Scheduler
-    chai.add(chaiscript::fun([&chai,controller_ranks]()
+    chai.add(chs::user_type<h::Scheduler>(), "BaseScheduler");
+    chai.add(chs::user_type<h::ChaiScheduler>(), "Scheduler");
+    chai.add(chs::base_class<h::Scheduler, h::ChaiScheduler>());
+
+    chai.add(chs::fun([&chai,controller_ranks]()
     {
-        return std::make_shared<h::Scheduler>(proc_map->local(), &chai, proc_map.get(), controller_ranks);
+        return std::make_shared<h::ChaiScheduler>(&chai, proc_map.get(), controller_ranks);
     }),                                                                     "Scheduler");
 
-    using BV = chaiscript::Boxed_Value;
+    using BV = chs::Boxed_Value;
     auto clone    = chai.eval<std::function<BV (const BV&)>>("clone");
-    auto schedule = [clone](h::Scheduler* s, std::string name, std::string function, chaiscript::Boxed_Value arg, std::map<std::string, chaiscript::Boxed_Value> groups, int size)
+    auto schedule = [clone](h::ChaiScheduler* s, std::string name, std::string function, chs::Boxed_Value arg, std::map<std::string, chs::Boxed_Value> groups, int size)
     {
         h::ProcMap::Vector groups_vector;
 
@@ -25,7 +31,7 @@ void chai_scheduler(chaiscript::ChaiScript& chai, int controller_ranks)
         int specified = 0;
         for (auto& x : groups)
         {
-            int sz = chaiscript::boxed_cast<int>(x.second);
+            int sz = chs::boxed_cast<int>(x.second);
             if (sz <= 0)
                 unspecified.push_back(x.first);
             else
@@ -36,7 +42,7 @@ void chai_scheduler(chaiscript::ChaiScript& chai, int controller_ranks)
         int leftover_group_size = size / unspecified.size();
         for (auto& x : groups)
         {
-            int sz = chaiscript::boxed_cast<int>(x.second);
+            int sz = chs::boxed_cast<int>(x.second);
             if (sz > 0)
                 groups_vector.emplace_back(x.first, sz);
             else if (x.first == unspecified.back())
@@ -44,17 +50,21 @@ void chai_scheduler(chaiscript::ChaiScript& chai, int controller_ranks)
             else
                 groups_vector.emplace_back(x.first, leftover_group_size);
         }
-        s->schedule(name, function, clone(arg), groups_vector, size);
+        h::MemoryBuffer mb_arg;
+        h::save(mb_arg, clone(arg));
+        s->schedule(name, function, mb_arg, groups_vector, size);
     };
-    chai.add(chaiscript::fun(schedule),                                     "schedule");
-    chai.add(chaiscript::fun(&h::Scheduler::listen),                        "listen");
-    chai.add(chaiscript::fun(&h::Scheduler::size),                          "size");
-    chai.add(chaiscript::fun(&h::Scheduler::rank),                          "rank");
-    chai.add(chaiscript::fun(&h::Scheduler::workers),                       "workers");
-    chai.add(chaiscript::fun(&h::Scheduler::job_queue_empty),               "job_queue_empty");
-    chai.add(chaiscript::fun(&h::Scheduler::is_controller),                 "is_controller");
-    chai.add(chaiscript::fun(&h::Scheduler::control),                       "control");
-    chai.add(chaiscript::fun(&h::Scheduler::results_empty),                 "results_empty");
-    chai.add(chaiscript::fun(&h::Scheduler::pop),                           "pop");
-    chai.add(chaiscript::fun(&h::Scheduler::finish),                        "finish");
+    chai.add(chs::fun(schedule),                                     "schedule");
+
+    chai.add(chs::fun(&h::Scheduler::size),                          "size");
+    chai.add(chs::fun(&h::Scheduler::rank),                          "rank");
+    chai.add(chs::fun(&h::Scheduler::workers),                       "workers");
+    chai.add(chs::fun(&h::Scheduler::job_queue_empty),               "job_queue_empty");
+    chai.add(chs::fun(&h::Scheduler::is_controller),                 "is_controller");
+    chai.add(chs::fun(&h::Scheduler::control),                       "control");
+    chai.add(chs::fun(&h::Scheduler::results_empty),                 "results_empty");
+    chai.add(chs::fun(&h::Scheduler::finish),                        "finish");
+
+    chai.add(chs::fun(&h::ChaiScheduler::listen_chai),               "listen");
+    chai.add(chs::fun(&h::ChaiScheduler::pop_chai),                  "pop");
 }

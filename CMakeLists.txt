@@ -5,6 +5,7 @@ option                      (use_boost          "Use Boost.Context"             
 option                      (python             "Build Python bindings"          ON)
 option                      (mpi-wrappers       "Include MPI wrappers"           ON)
 option                      (regenerate-wrapper "Regenerate MPI wrapper"         ON)
+option                      (henson_backward    "Use cpp-backward"               ON)
 
 # Default to Release
 if                          (NOT CMAKE_BUILD_TYPE)
@@ -20,6 +21,15 @@ if                          (use_boost)
     include_directories     (SYSTEM ${Boost_INCLUDE_DIR})
 endif()
 
+# backward
+#
+if                          (henson_backward)
+    add_subdirectory(ext/backward-cpp)
+    set(HENSON_BACKWARD_ENABLE ${BACKWARD_ENABLE})
+else()
+    set(HENSON_BACKWARD_ENABLE "")
+endif()
+
 # MPI
 find_package                (MPI REQUIRED)
 set                         (mpi_libraries MPI::MPI_C MPI::MPI_CXX)
@@ -33,6 +43,7 @@ set                         (libraries ${libraries} ${CMAKE_THREAD_LIBS_INIT})
 
 include_directories         (${CMAKE_CURRENT_BINARY_DIR}
                              ${CMAKE_CURRENT_SOURCE_DIR}
+                             ${CMAKE_CURRENT_SOURCE_DIR}/ext/spdlog/include
                              ${CMAKE_CURRENT_SOURCE_DIR}/include
                              SYSTEM ${MPI_C_INCLUDE_PATH})
 
@@ -58,7 +69,7 @@ set                         (CMAKE_CXX_STANDARD 14)
 
 # Format
 add_subdirectory            (ext/fmt)
-include_directories         (ext/fmt)
+include_directories         (ext/fmt/include)
 
 set                         (HENSON_LIB_SOURCES src/context.cpp src/data.cpp ${HENSON_LIB_SOURCES})
 add_library                 (henson_lib ${HENSON_LIB_SOURCES})
@@ -100,7 +111,13 @@ add_executable              (henson-chai henson-chai.cpp
                                          src/chai/procs.cpp
                                          src/chai/scheduler.cpp
                                          src/chai/util.cpp
-                                         src/chai/stdlib.cpp)
+                                         src/chai/stdlib.cpp
+                                         ${HENSON_BACKWARD_ENABLE})
+
+if                          (henson_backward)
+    add_backward(henson-chai)
+endif()
+
 add_executable              (henson-exec henson-exec.cpp
                                          ${CMAKE_CURRENT_BINARY_DIR}/src/version.cpp)
 target_link_libraries       (henson-hwl  PRIVATE fmt ${libraries})

@@ -6,3 +6,6 @@ add_custom_target           (async.chai ALL ${CMAKE_COMMAND} -E copy ${CMAKE_CUR
 
 add_custom_target           (async-sched.chai ALL ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/async-sched.chai
                              ${CMAKE_CURRENT_BINARY_DIR}/async-sched.chai DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/async-sched.chai)
+
+add_custom_target           (async-sched.py ALL ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/async-sched.py
+                             ${CMAKE_CURRENT_BINARY_DIR}/../../bindings/python/async-sched.py DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/async-sched.py)
