@@ -1,6 +1,7 @@
 #ifndef HENSON_SERIALIZATION_HPP
 #define HENSON_SERIALIZATION_HPP
 
+#include <iostream>
 #include <vector>
 #include <valarray>
 #include <map>

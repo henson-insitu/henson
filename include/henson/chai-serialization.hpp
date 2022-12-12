@@ -66,9 +66,9 @@ namespace henson
             {
                 henson::save(bb, tags::array_);
                 henson::save(bb, chaiscript::boxed_cast<Array>(bv));
-            } else if (bv.get_type_info().is_undef())
+            } else if (bv.get_type_info().is_undef()) {
                 henson::save(bb, tags::undef_);
-            else
+            } else
                 throw std::runtime_error("Cannot serialize a boxed value");
         }
 

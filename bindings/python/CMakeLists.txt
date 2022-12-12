@@ -1,7 +1,10 @@
 list                        (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 find_package                (MPI4Py)
 
-pybind11_add_module         (pyhenson henson.cpp)
+pybind11_add_module         (pyhenson henson.cpp ${HENSON_BACKWARD_ENABLE})
+if                          (henson_backward)
+    add_backward                (pyhenson)
+endif()
 
 target_link_libraries       (pyhenson PRIVATE fmt ${libraries})
 if                          (use_boost)

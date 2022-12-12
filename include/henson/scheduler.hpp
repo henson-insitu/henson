@@ -14,10 +14,10 @@
 
 #include <mpi.h>
 
-#include <spdlog/spdlog.h>
-namespace spd = spdlog;
+#include <henson/logger.hpp>
 
 #include <chaiscript/chaiscript.hpp>
+namespace chs = chaiscript;
 
 #include <henson/procs.hpp>
 #include <henson/serialization.hpp>
@@ -38,14 +38,14 @@ class Scheduler
         struct Job
         {
             Job() = default;
-            Job(size_t id_, std::string name_, std::string function_, chaiscript::Boxed_Value arg_, ProcMap::Vector groups_, int size_):
+            Job(size_t id_, std::string name_, std::string function_, MemoryBuffer arg_, ProcMap::Vector groups_, int size_):
                 id(id_), name(name_), function(function_), arg(arg_), groups(groups_), size(size_)
             {}
 
             size_t                      id;
             std::string                 name;
             std::string                 function;
-            chaiscript::Boxed_Value     arg;
+            MemoryBuffer                arg;
             ProcMap::Vector             groups;
             size_t                      size;
         };
@@ -72,8 +72,8 @@ class Scheduler
             };
         };
 
-                Scheduler(MPI_Comm world,  chaiscript::ChaiScript* chai, henson::ProcMap* proc_map, int controller_ranks = 1):
-                    world_(world), chai_(chai), proc_map_(proc_map), controller_ranks_(controller_ranks)
+                Scheduler(henson::ProcMap* proc_map, int controller_ranks = 1):
+                    world_(proc_map->local()), proc_map_(proc_map), controller_ranks_(controller_ranks)
         {
             MPI_Comm_rank(world_, &rank_);
             MPI_Comm_size(world_, &size_);
@@ -93,7 +93,7 @@ class Scheduler
                 MPI_Comm_free(&new_comm);
         }
 
-                ~Scheduler()                { if (is_controller()) proc_map_->pop_back(); }
+        virtual        ~Scheduler()                { if (is_controller()) proc_map_->pop_back(); }
 
         int     size() const                { return size_; }
         int     rank() const                { return rank_; }
@@ -102,11 +102,11 @@ class Scheduler
         bool    is_controller() const       { return rank_ < controller_ranks_; }
 
         bool    results_empty() const       { return results_.empty(); }
-        chaiscript::Boxed_Value
+        MemoryBuffer
                 pop()                       { auto bv = results_.front(); results_.pop(); return bv; }
 
 
-        void    schedule(std::string name, std::string function, chaiscript::Boxed_Value arg, ProcMap::Vector groups, int size)
+        void    schedule(std::string name, std::string function, const MemoryBuffer& arg, ProcMap::Vector groups, int size)
         {
             jobs_.emplace(job_id_++, name, function, arg, groups, size);
         }
@@ -123,7 +123,7 @@ class Scheduler
             return unfinished_jobs() || !jobs_.empty();
         }
 
-        void    listen()
+        void    listen(std::function<MemoryBuffer(Job&)> runner)
         {
             while (true)
             {
@@ -161,19 +161,9 @@ class Scheduler
 
                     proc_map_->extend(job_world, job.groups);
 
-                    chaiscript::Boxed_Value result;
-                    if (job.arg.get_type_info().is_undef())
-                    {
-                        // call the argument-free version of the function
-                        auto function = chai_->eval<std::function<chaiscript::Boxed_Value()>>(job.function);
-                        result = function();
-                    } else
-                    {
-                        auto function = chai_->eval<std::function<chaiscript::Boxed_Value(chaiscript::Boxed_Value)>>(job.function);
-                        result = function(job.arg);
-                    }
-                    auto& result_ti = result.get_type_info();
-                    if (!(result_ti.is_undef() || result_ti.is_void() || result_ti.bare_equal_type_info(typeid(bool))))
+                    MemoryBuffer result = runner(job);
+
+                    if (!result.empty())
                     {
                         log_->debug("Sending back result");
                         henson::MemoryBuffer bb;
@@ -183,7 +173,30 @@ class Scheduler
                         MPI_Send(bb.data(), bb.size(), MPI_BYTE, 0, tags::job_finished, world_);
                     } else
                         log_->debug("Result undefined");
-                    log_->debug("Finished job {}", job.name);
+
+                    //chs::Boxed_Value result;
+                    //if (job.arg.get_type_info().is_undef())
+                    //{
+                    //    // call the argument-free version of the function
+                    //    auto function = chai_->eval<std::function<chs::Boxed_Value()>>(job.function);
+                    //    result = function();
+                    //} else
+                    //{
+                    //    auto function = chai_->eval<std::function<chs::Boxed_Value(chs::Boxed_Value)>>(job.function);
+                    //    result = function(job.arg);
+                    //}
+                    //auto& result_ti = result.get_type_info();
+                    //if (!(result_ti.is_undef() || result_ti.is_void() || result_ti.bare_equal_type_info(typeid(bool))))
+                    //{
+                    //    log_->debug("Sending back result");
+                    //    henson::MemoryBuffer bb;
+                    //    henson::save(bb, job.id);
+                    //    henson::save(bb, job.name);
+                    //    henson::save(bb, result);
+                    //    MPI_Send(bb.data(), bb.size(), MPI_BYTE, 0, tags::job_finished, world_);
+                    //} else
+                    //    log_->debug("Result undefined");
+                    //log_->debug("Finished job {}", job.name);
 
                     proc_map_->pop_back();
                 }
@@ -200,7 +213,7 @@ class Scheduler
             signal_stop();
         }
 
-    private:
+    protected:
         void    log_job_times()
         {
             for (auto& x : job_times_)
@@ -220,6 +233,7 @@ class Scheduler
                 if (procs == num_procs)
                     return i - (procs - 1);
             }
+
             return available_procs_.size();
         }
 
@@ -280,7 +294,7 @@ class Scheduler
 
                 size_t      id;
                 std::string name;
-                chaiscript::Boxed_Value result;
+                MemoryBuffer result;
                 henson::load(bb, id);
                 henson::load(bb, name);
                 henson::load(bb, result);
@@ -317,17 +331,59 @@ class Scheduler
 
         std::queue<Job>                                     jobs_;
         std::map<size_t, ActiveJob>                         active_jobs_;
-        std::queue<chaiscript::Boxed_Value>                 results_;
+        std::queue<MemoryBuffer>                            results_;
         std::vector<TimeRecord>                             job_times_;
         size_t                                              job_id_ = 0;
 
-        chaiscript::ChaiScript*                             chai_;
         ProcMap*                                            proc_map_;
 
         int                                                 controller_ranks_;
         std::vector<bool>                                   available_procs_;
 
-        std::shared_ptr<spd::logger>                        log_ = spd::get("henson");
+        std::shared_ptr<spd::logger>                        log_ = get_or_create_logger();
+};
+
+struct ChaiScheduler : public Scheduler {
+
+    ChaiScheduler(chs::ChaiScript* chai, henson::ProcMap* proc_map, int controller_ranks = 1):
+        Scheduler(proc_map, controller_ranks), chai_(chai) {}
+
+    chs::ChaiScript*                             chai_;
+
+    chs::Boxed_Value                             pop_chai()
+    {
+        MemoryBuffer mb = pop();
+        chs::Boxed_Value result;
+        load(mb, result);
+        return result;
+    }
+
+    void listen_chai()
+    {
+        std::function<MemoryBuffer(Job&)> runner = [this](Job& job)
+        {
+            chs::Boxed_Value bv_result;
+            if (job.arg.empty())
+            {
+                // call the argument-free version of the function
+                auto function = chai_->eval<std::function<chs::Boxed_Value()>>(job.function);
+                bv_result = function();
+            } else
+            {
+                auto function = chai_->eval<std::function<chs::Boxed_Value(chs::Boxed_Value)>>(job.function);
+                chs::Boxed_Value bv_arg;
+                job.arg.reset();                     // set position to 0 so that load reads data from the beginning of the buffer
+                load(job.arg, bv_arg);
+                bv_result = function(bv_arg);
+            }
+
+            MemoryBuffer result;
+            if (!detail::is_boxed<bool>(bv_result))
+                save(result, bv_result);
+            return result;
+        };
+        listen(runner);
+    }
 };
 
 template<>

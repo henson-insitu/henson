@@ -56,7 +56,7 @@ if(sched.is_controller())
 {
     for(var m = 0; m < 5; ++m)
     {
-        sched.schedule("${m}", "world", [250,10,1], ["producer" : 0, "consumer" : 0], sched.workers())
+        sched.schedule("${m}", "world", [250,3,1], ["producer" : 0, "consumer" : 0], sched.workers())
     }
 
     while(sched.control()) {}
