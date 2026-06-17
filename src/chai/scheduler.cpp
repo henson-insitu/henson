@@ -24,32 +24,11 @@ void chai_scheduler(chs::ChaiScript& chai, int controller_ranks)
     auto clone    = chai.eval<std::function<BV (const BV&)>>("clone");
     auto schedule = [clone](h::ChaiScheduler* s, std::string name, std::string function, chs::Boxed_Value arg, std::map<std::string, chs::Boxed_Value> groups, int size)
     {
-        h::ProcMap::Vector groups_vector;
-
-        // divide unused procs between groups of size <= 0
-        std::vector<std::string> unspecified;
-        int specified = 0;
+        std::map<std::string, int> group_sizes;
         for (auto& x : groups)
-        {
-            int sz = chs::boxed_cast<int>(x.second);
-            if (sz <= 0)
-                unspecified.push_back(x.first);
-            else
-                specified += sz;
-        }
+            group_sizes.emplace(x.first, chs::boxed_cast<int>(x.second));
 
-        int leftover = size - specified;
-        int leftover_group_size = size / unspecified.size();
-        for (auto& x : groups)
-        {
-            int sz = chs::boxed_cast<int>(x.second);
-            if (sz > 0)
-                groups_vector.emplace_back(x.first, sz);
-            else if (x.first == unspecified.back())
-                groups_vector.emplace_back(x.first, leftover - leftover_group_size * (unspecified.size() - 1));     // in case leftover doesn't divide evenly
-            else
-                groups_vector.emplace_back(x.first, leftover_group_size);
-        }
+        h::ProcMap::Vector groups_vector = h::Scheduler::split_groups(group_sizes, size);
         h::MemoryBuffer mb_arg;
         h::save(mb_arg, clone(arg));
         s->schedule(name, function, mb_arg, groups_vector, size);

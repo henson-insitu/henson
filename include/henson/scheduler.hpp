@@ -78,6 +78,9 @@ class Scheduler
             MPI_Comm_rank(world_, &rank_);
             MPI_Comm_size(world_, &size_);
 
+            if (controller_ranks_ <= 0 || controller_ranks_ >= size_)
+                throw std::runtime_error("Scheduler requires at least one controller and one worker rank");
+
             // Wait for everyone, then initialize list of available procs
             MPI_Barrier(world_);
             available_procs_.assign(size_, true);
@@ -108,7 +111,54 @@ class Scheduler
 
         void    schedule(std::string name, std::string function, const MemoryBuffer& arg, ProcMap::Vector groups, int size)
         {
+            if (size <= 0)
+                throw std::runtime_error("Job size must be positive");
             jobs_.emplace(job_id_++, name, function, arg, groups, size);
+        }
+
+        static ProcMap::Vector split_groups(const std::map<std::string, int>& groups, int size)
+        {
+            if (size <= 0)
+                throw std::runtime_error("Job size must be positive");
+
+            ProcMap::Vector groups_vector;
+            std::vector<std::string> unspecified;
+            int specified = 0;
+            for (auto& x : groups)
+            {
+                if (x.second <= 0)
+                    unspecified.push_back(x.first);
+                else
+                    specified += x.second;
+            }
+
+            int leftover = size - specified;
+            if (leftover < 0)
+                throw std::runtime_error("Specified group sizes exceed job size");
+
+            if (unspecified.empty())
+            {
+                if (leftover != 0)
+                    throw std::runtime_error("Specified group sizes do not match job size");
+
+                for (auto& x : groups)
+                    groups_vector.emplace_back(x.first, x.second);
+                return groups_vector;
+            }
+
+            int leftover_group_size = leftover / static_cast<int>(unspecified.size());
+            for (auto& x : groups)
+            {
+                int sz = x.second;
+                if (sz > 0)
+                    groups_vector.emplace_back(x.first, sz);
+                else if (x.first == unspecified.back())
+                    groups_vector.emplace_back(x.first, leftover - leftover_group_size * (unspecified.size() - 1));
+                else
+                    groups_vector.emplace_back(x.first, leftover_group_size);
+            }
+
+            return groups_vector;
         }
 
         bool    control()

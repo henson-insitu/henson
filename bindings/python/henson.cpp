@@ -57,31 +57,7 @@ public:
 
     void _schedule(std::string name, std::string function, const py::object& arg, std::map<std::string, int> groups, int size)
     {
-        ProcMap::Vector groups_vector;
-        // divide unused procs between groups of size <= 0
-        std::vector<std::string> unspecified;
-        int specified = 0;
-        for (auto& x : groups)
-        {
-            int sz = x.second;
-            if (sz <= 0)
-                unspecified.push_back(x.first);
-            else
-                specified += sz;
-        }
-
-        int leftover = size - specified;
-        int leftover_group_size = size / unspecified.size();
-        for (auto& x : groups)
-        {
-            int sz = x.second;
-            if (sz > 0)
-                groups_vector.emplace_back(x.first, sz);
-            else if (x.first == unspecified.back())
-                groups_vector.emplace_back(x.first, leftover - leftover_group_size * (unspecified.size() - 1));     // in case leftover doesn't divide evenly
-            else
-                groups_vector.emplace_back(x.first, leftover_group_size);
-        }
+        ProcMap::Vector groups_vector = Scheduler::split_groups(groups, size);
 
         MemoryBuffer mb_arg;
         save_py_object(mb_arg, arg);
