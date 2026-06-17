@@ -8,6 +8,7 @@
 #include <set>
 #include <string>
 #include <fstream>
+#include <stdexcept>
 
 #include <tuple>
 #include <unordered_map>
@@ -52,13 +53,16 @@ namespace henson
     static float        growth_multiplier()                         { return 1.5; }
 
     // simple file IO
-    void                write(const std::string& fn) const          { std::ofstream out(fn.c_str()); out.write(&buffer[0], size()); }
+    void                write(const std::string& fn) const          { std::ofstream out(fn.c_str()); if (!buffer.empty()) out.write(buffer.data(), size()); }
     void                read(const std::string& fn)
     {
         std::ifstream in(fn.c_str(), std::ios::binary | std::ios::ate);
-        buffer.resize(in.tellg());
+        if (!in)
+            throw std::runtime_error("Could not open: " + fn);
+        buffer.resize(static_cast<size_t>(in.tellg()));
         in.seekg(0);
-        in.read(&buffer[0], size());
+        if (!buffer.empty())
+            in.read(buffer.data(), size());
         position = 0;
     }
 
@@ -145,7 +149,8 @@ namespace henson
       for (size_t i = 0; i < n; ++i)
         henson::save(bb, x[i]);
     else        // if Serialization is not specialized for U, just save the binary data
-      bb.save_binary((const char*) &x[0], sizeof(T)*n);
+      if (n)
+        bb.save_binary((const char*) &x[0], sizeof(T)*n);
   }
 
   template<class T>
@@ -155,7 +160,8 @@ namespace henson
       for (size_t i = 0; i < n; ++i)
         henson::load(bb, x[i]);
     else      // if Serialization is not specialized for U, just load the binary data
-      bb.load_binary((char*) &x[0], sizeof(T)*n);
+      if (n)
+        bb.load_binary((char*) &x[0], sizeof(T)*n);
   }
 
 
@@ -166,14 +172,16 @@ namespace henson
     static void         save(BinaryBuffer& bb, const MemoryBuffer& x)
     {
       henson::save(bb, x.position);
-      henson::save(bb, &x.buffer[0], x.position);
+      if (x.position)
+        henson::save(bb, x.buffer.data(), x.position);
     }
 
     static void         load(BinaryBuffer& bb, MemoryBuffer& x)
     {
       henson::load(bb, x.position);
       x.buffer.resize(x.position);
-      henson::load(bb, &x.buffer[0], x.position);
+      if (x.position)
+        henson::load(bb, x.buffer.data(), x.position);
     }
   };
 
@@ -187,7 +195,8 @@ namespace henson
     {
       size_t s = v.size();
       henson::save(bb, s);
-      henson::save(bb, &v[0], v.size());
+      if (s)
+        henson::save(bb, &v[0], v.size());
     }
 
     static void         load(BinaryBuffer& bb, Vector& v)
@@ -195,7 +204,8 @@ namespace henson
       size_t s;
       henson::load(bb, s);
       v.resize(s);
-      henson::load(bb, &v[0], s);
+      if (s)
+        henson::load(bb, &v[0], s);
     }
   };
 
@@ -208,7 +218,8 @@ namespace henson
     {
       size_t s = v.size();
       henson::save(bb, s);
-      henson::save(bb, &v[0], v.size());
+      if (s)
+        henson::save(bb, &v[0], v.size());
     }
 
     static void         load(BinaryBuffer& bb, ValArray& v)
@@ -216,7 +227,8 @@ namespace henson
       size_t s;
       henson::load(bb, s);
       v.resize(s);
-      henson::load(bb, &v[0], s);
+      if (s)
+        henson::load(bb, &v[0], s);
     }
   };
 

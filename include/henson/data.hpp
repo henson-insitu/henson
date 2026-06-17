@@ -6,6 +6,7 @@
 #include <queue>
 #include <vector>
 #include <memory>
+#include <stdexcept>
 
 #include "variant.hpp"
 #include "serialization.hpp"
@@ -129,16 +130,28 @@ class NameMap
             if (it != queues_.end())
             {
                 auto& q = it->second;
+                if (q.empty())
+                    throw std::runtime_error("Queue is empty: " + name);
                 Value v = q.front();
                 q.pop();
                 return v;
             }
-            else return
-                values_.find(name)->second;
+
+            auto value_it = values_.find(name);
+            if (value_it == values_.end())
+                throw std::runtime_error("No value named: " + name);
+
+            return value_it->second;
         }
 
         void        create_queue(const std::string& name)               { queues_.emplace(name, ValueQueue()); }
-        bool        queue_empty(const std::string& name) const          { return queues_.find(name)->second.empty(); }
+        bool        queue_empty(const std::string& name) const
+        {
+            auto it = queues_.find(name);
+            if (it == queues_.end())
+                throw std::runtime_error("No queue named: " + name);
+            return it->second.empty();
+        }
 
         bool        exists(const std::string& name) const               { return values_.find(name) != values_.end() || queues_.find(name) != queues_.end(); }
 
