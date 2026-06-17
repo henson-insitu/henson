@@ -35,6 +35,30 @@ _EXTERN_C_ void pmpi_init__(MPI_Fint *ierr);
     if (comm == MPI_COMM_WORLD) \
         comm = henson_get_world();
 
+static int henson_trace_world_enabled(void)
+{
+    static int initialized = 0;
+    static int enabled = 0;
+    if (!initialized)
+    {
+        enabled = getenv("HENSON_TRACE_WORLD") != NULL;
+        initialized = 1;
+    }
+    return enabled;
+}
+
+static void henson_trace_world_call(const char* func, MPI_Comm original, MPI_Comm rewritten)
+{
+    if (!henson_trace_world_enabled() || !henson_active())
+        return;
+
+    int rank = -1;
+    PMPI_Comm_rank(rewritten, &rank);
+    fprintf(stderr, "[henson-pmpi] %s rank=%d original=%p rewritten=%p replaced=%d\n",
+            func, rank, (void*) original, (void*) rewritten, original == MPI_COMM_WORLD);
+    fflush(stderr);
+}
+
 /* ================== C Wrappers for MPI_Init ================== */
 _EXTERN_C_ int PMPI_Init(int *argc, char ***argv);
 _EXTERN_C_ int MPI_Init(int *argc, char ***argv) { 
@@ -462,8 +486,10 @@ _EXTERN_C_ int MPI_Cart_shift(MPI_Comm comm, int direction, int disp, int *rank_
 _EXTERN_C_ int PMPI_Comm_size(MPI_Comm comm, int *size);
 _EXTERN_C_ int MPI_Comm_size(MPI_Comm comm, int *size) { 
     int _wrap_py_return_val = 0;
+    MPI_Comm original = comm;
 
   HENSON_REPLACE_COMM_WORLD(comm);
+  henson_trace_world_call("MPI_Comm_size", original, comm);
 
   _wrap_py_return_val = PMPI_Comm_size(comm, size);
     return _wrap_py_return_val;
@@ -969,8 +995,10 @@ _EXTERN_C_ int MPI_Ialltoall(const void *sendbuf, int sendcount, MPI_Datatype se
 _EXTERN_C_ int PMPI_Comm_rank(MPI_Comm comm, int *rank);
 _EXTERN_C_ int MPI_Comm_rank(MPI_Comm comm, int *rank) { 
     int _wrap_py_return_val = 0;
+    MPI_Comm original = comm;
 
   HENSON_REPLACE_COMM_WORLD(comm);
+  henson_trace_world_call("MPI_Comm_rank", original, comm);
 
   _wrap_py_return_val = PMPI_Comm_rank(comm, rank);
     return _wrap_py_return_val;
@@ -1969,8 +1997,10 @@ _EXTERN_C_ int MPI_Comm_create_errhandler(MPI_Comm_errhandler_function *comm_err
 _EXTERN_C_ int PMPI_Barrier(MPI_Comm comm);
 _EXTERN_C_ int MPI_Barrier(MPI_Comm comm) { 
     int _wrap_py_return_val = 0;
+    MPI_Comm original = comm;
 
   HENSON_REPLACE_COMM_WORLD(comm);
+  henson_trace_world_call("MPI_Barrier", original, comm);
 
   _wrap_py_return_val = PMPI_Barrier(comm);
     return _wrap_py_return_val;
@@ -3343,8 +3373,10 @@ _EXTERN_C_ int MPI_File_write_ordered(MPI_File fh, const void *buf, int count, M
 _EXTERN_C_ int PMPI_Comm_dup(MPI_Comm comm, MPI_Comm *newcomm);
 _EXTERN_C_ int MPI_Comm_dup(MPI_Comm comm, MPI_Comm *newcomm) { 
     int _wrap_py_return_val = 0;
+    MPI_Comm original = comm;
 
   HENSON_REPLACE_COMM_WORLD(comm);
+  henson_trace_world_call("MPI_Comm_dup", original, comm);
 
   _wrap_py_return_val = PMPI_Comm_dup(comm, newcomm);
     return _wrap_py_return_val;
@@ -4124,5 +4156,4 @@ _EXTERN_C_ int MPI_File_read_at(MPI_File fh, MPI_Offset offset, void *buf, int c
   _wrap_py_return_val = PMPI_File_read_at(fh, offset, buf, count, datatype, status);
     return _wrap_py_return_val;
 }
-
 

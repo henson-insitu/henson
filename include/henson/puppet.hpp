@@ -63,7 +63,15 @@ struct Puppet: public Coroutine<Puppet>
 
     void                load(ProcMap* procmap, NameMap* namemap)
                         {
-                            void* lib = dlopen(filename_.c_str(), RTLD_LAZY);
+                            int dlopen_flags = RTLD_NOW | RTLD_GLOBAL;
+#ifdef RTLD_DEEPBIND
+                            // Prefer the puppet's dependency graph over already-loaded
+                            // global symbols such as libmpi from mpi4py, otherwise the
+                            // henson-pmpi MPI wrappers may be bypassed for dlopened .hx modules.
+                            dlopen_flags |= RTLD_DEEPBIND;
+#endif
+
+                            void* lib = dlopen(filename_.c_str(), dlopen_flags);
                             lib_ = lib;
                             if (lib == NULL)
                                 throw std::runtime_error(fmt::format("Could not load {}\n{}\n", filename_, dlerror()));
