@@ -1,5 +1,5 @@
+cmake_minimum_required      (VERSION 3.10)
 project                     (Henson)
-cmake_minimum_required      (VERSION 3.9)
 
 option                      (use_boost          "Use Boost.Context"              OFF)
 option                      (python             "Build Python bindings"          ON)

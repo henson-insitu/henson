@@ -80,6 +80,7 @@ done
 if [ $PASSED -eq 1 ]
 then
     echo "All tests passed!"
+else
+    exit 1
 fi
-
 
