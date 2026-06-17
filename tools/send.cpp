@@ -155,6 +155,6 @@ int main(int argc, char** argv)
             } else
                 fmt::print("Warning: unknown type {} for {}\n", var.type, var.name);
         }
-        MPI_Send(&buffer[0], buffer.size(), MPI_BYTE, rank, tags::data, remote);
+        MPI_Send(buffer.empty() ? nullptr : buffer.data(), buffer.size(), MPI_BYTE, rank, tags::data, remote);
     }
 }

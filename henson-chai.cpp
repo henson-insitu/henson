@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
     Options ops;
     ops
         >> Option('p', "procs", procs_sizes, "number of processors to use for a control group")
-        >> Option('v', "var",   variables,   "define variables to inject into the script")
+        >> Option("var",        variables,   "define variables to inject into the script")
         >> Option('l', "log",   log_level,   "log level to use")
         >> Option('c', "controller", controller_ranks,  "ranks to use for scheduler controller")
         >> Option("verbose",    verbose,     "verbose output")

@@ -130,7 +130,7 @@ int main(int argc, char** argv)
             MPI_Probe(rank, tags::data, remote, &s);
             MPI_Get_count(&s, MPI_BYTE, &c);
             buffer.resize(c);
-            MPI_Recv(&buffer[0], buffer.size(), MPI_BYTE, rank, tags::data, remote, &s);
+            MPI_Recv(buffer.empty() ? nullptr : buffer.data(), buffer.size(), MPI_BYTE, rank, tags::data, remote, &s);
         }
 
         std::vector<std::vector<char>>              arrays(array_count);
@@ -192,7 +192,7 @@ int main(int argc, char** argv)
                     {
                         size_t count; size_t type;
                         std::tie(count,type) = arrays_meta[array_idx];
-                        henson_save_array(name.c_str(), &arrays[array_idx][0], type, count, type);
+                        henson_save_array(name.c_str(), arrays[array_idx].empty() ? nullptr : arrays[array_idx].data(), type, count, type);
                         ++array_idx;
                     }
         }
