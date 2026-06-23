@@ -1,0 +1,16 @@
+var procmap = ProcMap()
+
+if (procmap.group() == "producer")
+{
+    var check = load("../pmpi-world/pmpi-world-check ${expected_size}", procmap)
+    check.proceed()
+}
+else if (procmap.group() == "consumer")
+{
+    var check = load("../pmpi-world/pmpi-world-check ${expected_size}", procmap)
+    check.proceed()
+}
+else
+{
+    print("I'm not part of producer or consumer group")
+}

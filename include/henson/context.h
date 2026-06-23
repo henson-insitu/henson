@@ -20,6 +20,18 @@ MPI_Comm    henson_get_intracomm(const char* to);
 
 #ifdef __cplusplus
 }
+
+namespace henson
+{
+struct ScopedProcMapActivation
+{
+        explicit ScopedProcMapActivation(void* procmap)     { henson_set_procmap(procmap); }
+        ~ScopedProcMapActivation()                         { henson_set_procmap(nullptr); }
+
+        ScopedProcMapActivation(const ScopedProcMapActivation&)            =delete;
+        ScopedProcMapActivation& operator=(const ScopedProcMapActivation&) =delete;
+};
+}
 #endif
 
 #endif

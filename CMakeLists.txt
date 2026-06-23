@@ -176,6 +176,7 @@ add_subdirectory            (examples/async)
 add_subdirectory            (examples/fair)
 add_subdirectory            (examples/storage)
 add_subdirectory            (examples/queue)
+add_subdirectory            (examples/pmpi-world)
 add_subdirectory            (examples/embed-python)
 add_subdirectory            (tools)
 

@@ -1,0 +1,6 @@
+spack:
+  specs:
+  - mpich@4.3.2~fortran~hwloc~libxml2~romio~pci device=ch3:sock netmod=tcp pmi=default +hydra +wrapperrpath%gcc@15.2.1
+  concretizer:
+    unify: true
+  view: true

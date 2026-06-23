@@ -1,0 +1,8 @@
+producer = ./pmpi-world-check $expected_size(1)
+consumer = ./pmpi-world-check $expected_size(1)
+
+producer while producer:
+    producer
+
+consumer while consumer:
+    consumer

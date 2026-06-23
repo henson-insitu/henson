@@ -1,0 +1,42 @@
+spack:
+  specs:
+  - openmpi@5.0.9~fortran~cuda~rocm~rsh~romio~vt fabrics=none schedulers=none ~internal-hwloc +internal-libevent +internal-pmix +wrapper-rpath%gcc@15.2.1
+  packages:
+    autoconf:
+      externals:
+      - spec: autoconf@2.73
+        prefix: /usr
+      buildable: false
+    automake:
+      externals:
+      - spec: automake@1.18.1
+        prefix: /usr
+      buildable: false
+    libtool:
+      externals:
+      - spec: libtool@2.6.0
+        prefix: /usr
+      buildable: false
+    hwloc:
+      externals:
+      - spec: hwloc@2.13.0
+        prefix: /usr
+      buildable: false
+    m4:
+      externals:
+      - spec: m4@1.4.21
+        prefix: /usr
+      buildable: false
+    numactl:
+      externals:
+      - spec: numactl@2.0.19
+        prefix: /usr
+      buildable: false
+    perl:
+      externals:
+      - spec: perl@5.42.2+cpanm+opcode+open+shared+threads
+        prefix: /usr
+      buildable: false
+  concretizer:
+    unify: true
+  view: true

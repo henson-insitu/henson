@@ -31,6 +31,11 @@ std::string active_puppet;
 std::shared_ptr<h::ProcMap> proc_map;
 bool abort_on_segfault_ = true;
 
+struct ProcMapReset
+{
+    ~ProcMapReset() { proc_map.reset(); }
+};
+
 #include <cxxabi.h>
 
 void catch_sig(int signum)
@@ -202,8 +207,8 @@ int main(int argc, char *argv[])
 
     h::NameMap namemap;
     proc_map = std::make_shared<h::ProcMap>(world, h::ProcMap::parse_procs(procs_sizes, size));
-
-    henson_set_procmap(&*proc_map);         // "activate henson" in libhenson-pmpi.so
+    ProcMapReset reset_proc_map;
+    h::ScopedProcMapActivation active_procmap(&*proc_map);
 
     try
     {
@@ -223,5 +228,4 @@ int main(int argc, char *argv[])
 
     signal(SIGSEGV, SIG_DFL);       // restore default signal
 
-    proc_map = std::shared_ptr<h::ProcMap>();   // release ProcMap before MPI_Finalize from RAII
 }
