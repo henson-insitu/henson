@@ -49,10 +49,15 @@ void henson_set_procmap(void* pm)
     procmap = static_cast<henson::ProcMap*>(pm);
 }
 
+void* henson_get_procmap()
+{
+    return procmap;
+}
+
 __attribute__ ((visibility ("hidden")))
 henson::ProcMap* henson::get_procmap()
 {
-    return procmap;
+    return static_cast<henson::ProcMap*>(henson_get_procmap());
 }
 
 __attribute__ ((visibility ("hidden")))

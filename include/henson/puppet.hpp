@@ -15,6 +15,7 @@
 #include <mpi.h>
 
 #include <fmt/format.h>
+#include <henson/context.h>
 #include <henson/data.hpp>
 #include <henson/procs.hpp>
 
@@ -35,6 +36,7 @@ struct Puppet: public Coroutine<Puppet>
 
                         Puppet(const std::string& fn, int argc, char** argv, ProcMap* procmap, NameMap* namemap):
                             Parent(fn),
+                            procmap_(procmap),
                             filename_(fn),
                             argc_(argc), argv_(argc_)
                         {
@@ -49,6 +51,7 @@ struct Puppet: public Coroutine<Puppet>
 
                         Puppet(const std::string& fn, const std::vector<std::string>& args, ProcMap* procmap, NameMap* namemap):
                             Parent(fn),
+                            procmap_(procmap),
                             filename_(fn),
                             argc_(args.size()), argv_(argc_)
                         {
@@ -63,6 +66,8 @@ struct Puppet: public Coroutine<Puppet>
 
     void                load(ProcMap* procmap, NameMap* namemap)
                         {
+                            promote_pmpi_wrappers();
+
                             void* lib = dlopen(filename_.c_str(), RTLD_LAZY);
                             lib_ = lib;
                             if (lib == NULL)
@@ -83,6 +88,12 @@ struct Puppet: public Coroutine<Puppet>
                                 // (the linker may choose not to pull src/data.cpp and so henson_set_namemap will be missing)
                                 log_->warn("{} | Reasonable only if {} doesn't need to exchange any data", e.what(), filename_);
                             }
+                        }
+
+    void                proceed()
+                        {
+                            ScopedProcMapActivation active_procmap(procmap_);
+                            Parent::proceed();
                         }
 
                         ~Puppet()
@@ -122,6 +133,24 @@ struct Puppet: public Coroutine<Puppet>
         return f;
     }
 
+    static void         promote_pmpi_wrappers()
+                        {
+#if defined(RTLD_NOLOAD)
+                            Dl_info info;
+                            if (!dladdr((void*) &henson_set_procmap, &info) ||
+                                !info.dli_fname ||
+                                !strstr(info.dli_fname, "libhenson-pmpi"))
+                                return;
+
+                            // Python imports extension dependencies as local; promote the
+                            // already-loaded PMPI wrapper so puppet MPI symbols bind to it.
+                            void* lib = dlopen(info.dli_fname, RTLD_LAZY | RTLD_GLOBAL | RTLD_NOLOAD);
+                            if (lib)
+                                dlclose(lib);
+#endif
+                        }
+
+    ProcMap*            procmap_;
     std::string         filename_;
     int                 argc_;
     std::vector<char*>  argv_;
